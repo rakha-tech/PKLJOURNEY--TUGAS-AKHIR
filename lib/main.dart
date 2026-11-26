@@ -1,5 +1,9 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'screens/login_screen.dart';
+import 'screens/splash_screen.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,61 +21,48 @@ final supabase = Supabase.instance.client;
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'PKLJOURNEY',
-      theme: ThemeData(
-        colorScheme: .fromSeed(seedColor: Colors.purple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      home: const AppEntryFlow(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
+class AppEntryFlow extends StatefulWidget {
+  const AppEntryFlow({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<AppEntryFlow> createState() => _AppEntryFlowState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
+class _AppEntryFlowState extends State<AppEntryFlow> {
+  bool _showSplash = true;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
+    if (_showSplash) {
+      return SplashScreen(
+        onFinished: () {
+          setState(() {
+            _showSplash = false;
+          });
+        },
+      );
+    }
+
+    return LoginScreen(
+      onLogin: (user) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Selamat datang, ${user.name}!'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
     );
   }
 }
