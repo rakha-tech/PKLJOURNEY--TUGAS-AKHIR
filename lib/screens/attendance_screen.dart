@@ -52,7 +52,9 @@ class AttendanceScreen extends StatefulWidget {
 }
 
 class _AttendanceScreenState extends State<AttendanceScreen> {
-  final String _currentPhotoUrl = PklPhotoPresets.coding;
+  String _currentPhotoUrl = PklPhotoPresets.coding;
+  String? _todayCheckInPhoto;
+  String? _todayCheckOutPhoto;
 
   late bool _hasCheckedIn;
   late bool _hasCheckedOut;
@@ -111,23 +113,405 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     _hasCheckedOut = widget.hasCheckedOut ?? false;
     _checkInTime = widget.checkInTime ?? '07.45';
     _checkOutTime = widget.checkOutTime;
+    _todayCheckInPhoto = _hasCheckedIn ? PklPhotoPresets.coding : null;
+    _currentPhotoUrl = _todayCheckInPhoto ?? PklPhotoPresets.coding;
   }
 
-  void _recordAttendance() {
+  void _startAttendanceFlow() {
     if (_hasCheckedIn && _hasCheckedOut) return;
-
     final isCheckIn = !_hasCheckedIn;
+    _showPhotoCaptureSheet(isCheckIn: isCheckIn);
+  }
+
+  void _showPhotoCaptureSheet({required bool isCheckIn}) {
+    String? uploadedPhotoUrl;
+    String? fileName;
+    bool isUploading = false;
+    bool photoError = false;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (modalContext, setModalState) {
+          void doUpload({required bool fromCamera}) {
+            setModalState(() {
+              isUploading = true;
+              photoError = false;
+            });
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (!modalContext.mounted) return;
+              setModalState(() {
+                isUploading = false;
+                uploadedPhotoUrl = isCheckIn
+                    ? PklPhotoPresets.coding
+                    : PklPhotoPresets.report;
+                final tag = fromCamera ? 'CAM' : 'GAL';
+                final timeCode = currentTimeLabel().replaceAll('.', '');
+                fileName = isCheckIn
+                    ? 'PRESENSI_MASUK_${tag}_$timeCode.jpg'
+                    : 'PRESENSI_PULANG_${tag}_$timeCode.jpg';
+              });
+            });
+          }
+
+          return Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 26),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 38,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.line,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: isCheckIn
+                              ? AppColors.paleGreen
+                              : AppColors.cream,
+                          child: Icon(
+                            isCheckIn
+                                ? Icons.camera_alt_rounded
+                                : Icons.logout_rounded,
+                            color: isCheckIn ? AppColors.green : AppColors.maroon,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isCheckIn
+                                    ? 'Presensi Masuk PKL'
+                                    : 'Presensi Pulang PKL',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.ink,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isCheckIn
+                                    ? 'Upload foto kehadiran saat tiba di tempat industri.'
+                                    : 'Upload foto bukti selesai kerja sebelum pulang.',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.muted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Kotak Upload / Preview Foto
+                    if (uploadedPhotoUrl == null) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: photoError
+                              ? const Color(0xFFFDE8E8)
+                              : AppColors.paper,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: photoError ? Colors.red : AppColors.line,
+                            width: photoError ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (isUploading) ...[
+                              const CircularProgressIndicator(
+                                color: AppColors.maroon,
+                                strokeWidth: 3,
+                              ),
+                              const SizedBox(height: 14),
+                              const Text(
+                                'Sedang mengunggah foto kehadiran...',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.ink,
+                                ),
+                              ),
+                            ] else ...[
+                              Container(
+                                width: 58,
+                                height: 58,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.cream,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.cloud_upload_outlined,
+                                  color: AppColors.maroon,
+                                  size: 30,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Upload Foto Bukti Kehadiran',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.ink,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Wajib mengambil foto / selfie di tempat PKL.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.muted,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => doUpload(fromCamera: true),
+                                      icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                                      label: const Text('Buka Kamera'),
+                                      style: ElevatedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => doUpload(fromCamera: false),
+                                      icon: const Icon(Icons.photo_library_rounded, size: 18),
+                                      label: const Text('Pilih Galeri'),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        side: const BorderSide(color: AppColors.line),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      // Sudah Terupload: Tampilkan Foto & Tombol Ganti
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: AppColors.paper,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.green, width: 1.5),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                              child: Stack(
+                                children: [
+                                  Image.network(
+                                    uploadedPhotoUrl!,
+                                    height: 190,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
+                                  Positioned(
+                                    top: 10,
+                                    right: 10,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.green,
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.2),
+                                            blurRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.check_circle_rounded, color: Colors.white, size: 14),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Foto Berhasil Diupload',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.image_rounded, size: 22, color: AppColors.taupe),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          fileName ?? 'FOTO_PRESENSI.jpg',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.ink,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Ukuran: 2.1 MB • ${currentTimeLabel()} WIB',
+                                          style: const TextStyle(fontSize: 10, color: AppColors.muted),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      setModalState(() {
+                                        uploadedPhotoUrl = null;
+                                        fileName = null;
+                                      });
+                                    },
+                                    icon: const Icon(Icons.refresh_rounded, size: 16, color: AppColors.maroon),
+                                    label: const Text(
+                                      'Ganti Foto',
+                                      style: TextStyle(
+                                        color: AppColors.maroon,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    if (photoError) ...[
+                      const SizedBox(height: 10),
+                      const Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, size: 16, color: Colors.red),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Silakan upload foto terlebih dahulu sebelum konfirmasi!',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+
+                    // Tombol Konfirmasi Presensi
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        if (uploadedPhotoUrl == null) {
+                          setModalState(() {
+                            photoError = true;
+                          });
+                          return;
+                        }
+                        Navigator.pop(sheetContext);
+                        _recordAttendance(
+                          photoUrl: uploadedPhotoUrl!,
+                          isCheckIn: isCheckIn,
+                        );
+                      },
+                      icon: Icon(
+                        isCheckIn
+                            ? Icons.check_circle_rounded
+                            : Icons.logout_rounded,
+                      ),
+                      label: Text(
+                        isCheckIn
+                            ? 'Konfirmasi & Catat Masuk'
+                            : 'Konfirmasi & Catat Pulang',
+                      ),
+                      style: uploadedPhotoUrl == null
+                          ? ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.line,
+                              foregroundColor: AppColors.muted,
+                            )
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _recordAttendance({
+    required String photoUrl,
+    required bool isCheckIn,
+  }) {
     final now = DateTime.now();
     final timeStr =
         '${now.hour.toString().padLeft(2, '0')}.${now.minute.toString().padLeft(2, '0')}';
 
     setState(() {
-      if (!_hasCheckedIn) {
+      _currentPhotoUrl = photoUrl;
+      if (isCheckIn) {
         _hasCheckedIn = true;
         _checkInTime = timeStr;
-      } else if (!_hasCheckedOut) {
+        _todayCheckInPhoto = photoUrl;
+      } else {
         _hasCheckedOut = true;
         _checkOutTime = timeStr;
+        _todayCheckOutPhoto = photoUrl;
         _records.insert(
           0,
           AttendanceRecordItem(
@@ -135,8 +519,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             shortDate: '${now.day} Nov ${now.year}',
             checkInTime: _checkInTime,
             checkOutTime: _checkOutTime,
-            checkInPhoto: _currentPhotoUrl,
-            checkOutPhoto: PklPhotoPresets.report,
+            checkInPhoto: _todayCheckInPhoto ?? photoUrl,
+            checkOutPhoto: photoUrl,
             isApprovedByIduka: false,
           ),
         );
@@ -201,7 +585,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: AppColors.muted, fontSize: 12, height: 1.5),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
+              PklPhotoThumbnail(
+                imageUrl: photoUrl,
+                height: 120,
+                caption: isCheckIn ? 'Bukti Presensi Masuk' : 'Bukti Presensi Pulang',
+              ),
+              const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -597,7 +987,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Upload Foto & Catat Kehadiran (Tanpa Ganti Foto)
+          // Foto Kehadiran Hari Ini
           const SectionLabel('Foto Kehadiran Hari Ini'),
           WhiteCard(
             padding: 16,
@@ -639,7 +1029,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                   size: 12, color: Colors.white),
                               const SizedBox(width: 5),
                               Text(
-                                'Foto kehadiran ${currentTimeLabel()} WIB',
+                                _hasCheckedOut
+                                    ? 'Foto presensi pulang: ${_checkOutTime ?? currentTimeLabel()} WIB'
+                                    : _hasCheckedIn
+                                        ? 'Foto presensi masuk: ${_checkInTime ?? currentTimeLabel()} WIB'
+                                        : 'Foto kehadiran ${currentTimeLabel()} WIB',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
@@ -690,7 +1084,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 const SizedBox(height: 16),
 
                 ElevatedButton.icon(
-                  onPressed: isComplete ? null : _recordAttendance,
+                  onPressed: isComplete ? null : _startAttendanceFlow,
                   icon: Icon(
                     isComplete
                         ? Icons.check_circle_rounded
@@ -702,8 +1096,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     isComplete
                         ? 'Presensi Hari Ini Selesai'
                         : _hasCheckedIn
-                            ? 'Upload Foto & Catat Pulang'
-                            : 'Upload Foto & Catat Masuk',
+                            ? 'Ambil Foto & Catat Pulang'
+                            : 'Ambil Foto & Catat Masuk',
                   ),
                   style: isComplete
                       ? ElevatedButton.styleFrom(
