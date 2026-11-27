@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../models/pkl_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
-import 'admin_accounts_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({
@@ -55,12 +55,20 @@ class AdminDashboardScreen extends StatelessWidget {
     ],
     required this.onManageAccounts,
     this.onManageMentorship,
+    this.onOpenHistory,
+    this.notifications,
+    this.unreadNotificationCount = 1,
+    this.onNotificationsOpened,
   });
 
   final PklUser user;
   final List<PklUser> users;
   final VoidCallback onManageAccounts;
   final VoidCallback? onManageMentorship;
+  final VoidCallback? onOpenHistory;
+  final List<PklNotificationItem>? notifications;
+  final int unreadNotificationCount;
+  final VoidCallback? onNotificationsOpened;
 
   @override
   Widget build(BuildContext context) {
@@ -78,15 +86,22 @@ class AdminDashboardScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: [
-          const Row(
+          Row(
             children: [
-              BrandMark(compact: true),
-              Spacer(),
-              InfoPill(
+              const BrandMark(compact: true),
+              const Spacer(),
+              const InfoPill(
                 label: 'ADMIN',
                 color: AppColors.cream,
                 textColor: AppColors.maroon,
                 icon: Icons.admin_panel_settings_outlined,
+              ),
+              if (onOpenHistory != null)
+                PklHistoryButton(onTap: onOpenHistory!),
+              PklNotificationButton(
+                unreadCount: unreadNotificationCount,
+                notifications: notifications,
+                onOpened: onNotificationsOpened,
               ),
             ],
           ),

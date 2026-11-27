@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
@@ -47,6 +48,8 @@ class AttendanceRecord {
     this.checkOutTime,
     this.checkInPhoto,
     this.checkOutPhoto,
+    this.checkInPhotoBytes,
+    this.checkOutPhotoBytes,
     this.isApprovedByIduka = false,
     this.idukaApproverName,
     this.idukaApprovalTime,
@@ -57,6 +60,8 @@ class AttendanceRecord {
   final String? checkOutTime;
   final String? checkInPhoto;
   final String? checkOutPhoto;
+  final Uint8List? checkInPhotoBytes;
+  final Uint8List? checkOutPhotoBytes;
   final bool isApprovedByIduka;
   final String? idukaApproverName;
   final String? idukaApprovalTime;
@@ -67,6 +72,8 @@ class AttendanceRecord {
     String? checkOutTime,
     String? checkInPhoto,
     String? checkOutPhoto,
+    Uint8List? checkInPhotoBytes,
+    Uint8List? checkOutPhotoBytes,
     bool? isApprovedByIduka,
     String? idukaApproverName,
     String? idukaApprovalTime,
@@ -77,6 +84,8 @@ class AttendanceRecord {
       checkOutTime: checkOutTime ?? this.checkOutTime,
       checkInPhoto: checkInPhoto ?? this.checkInPhoto,
       checkOutPhoto: checkOutPhoto ?? this.checkOutPhoto,
+      checkInPhotoBytes: checkInPhotoBytes ?? this.checkInPhotoBytes,
+      checkOutPhotoBytes: checkOutPhotoBytes ?? this.checkOutPhotoBytes,
       isApprovedByIduka: isApprovedByIduka ?? this.isApprovedByIduka,
       idukaApproverName: idukaApproverName ?? this.idukaApproverName,
       idukaApprovalTime: idukaApprovalTime ?? this.idukaApprovalTime,
@@ -771,7 +780,8 @@ class _AttendanceDetailSheet extends StatelessWidget {
               ),
 
               // Foto bukti
-              if (record.checkInPhoto != null) ...[
+              if (record.checkInPhoto != null ||
+                  record.checkInPhotoBytes != null) ...[
                 const SizedBox(height: 14),
                 const Text(
                   'FOTO PRESENSI MASUK',
@@ -784,12 +794,14 @@ class _AttendanceDetailSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 PklPhotoThumbnail(
-                  imageUrl: record.checkInPhoto!,
+                  imageBytes: record.checkInPhotoBytes,
+                  imageUrl: record.checkInPhoto,
                   height: 130,
                   caption: 'Foto Presensi Masuk',
                 ),
               ],
-              if (record.checkOutPhoto != null) ...[
+              if (record.checkOutPhoto != null ||
+                  record.checkOutPhotoBytes != null) ...[
                 const SizedBox(height: 10),
                 const Text(
                   'FOTO PRESENSI PULANG',
@@ -802,7 +814,8 @@ class _AttendanceDetailSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 PklPhotoThumbnail(
-                  imageUrl: record.checkOutPhoto!,
+                  imageBytes: record.checkOutPhotoBytes,
+                  imageUrl: record.checkOutPhoto,
                   height: 130,
                   caption: 'Foto Presensi Pulang',
                 ),

@@ -1,61 +1,52 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
+import '../models/pkl_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
-
-class JournalEntry {
-  const JournalEntry({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.date,
-    required this.time,
-    required this.tag,
-  });
-
-  final String id;
-  final String title;
-  final String description;
-  final String date;
-  final String time;
-  final String tag;
-}
 
 class JournalScreen extends StatefulWidget {
   const JournalScreen({
     super.key,
+    this.student,
     this.entries = const [
-      JournalEntry(
+      PklJournalEntry(
         id: 'journal-001',
+        studentAccountId: '0054321980',
+        studentName: 'Ahmad Fauzi',
         title: 'Orientasi lingkungan kerja',
         description:
             'Mengenal tim, aturan kerja, dan alur kegiatan di tempat PKL.',
         date: '26 November 2026',
         time: '08.15',
         tag: 'Orientasi',
+        imageUrl: PklPhotoPresets.meeting,
+        isValidatedByMentor: true,
+        mentorName: 'Hendro Prasetyo, S.T.',
+        mentorNote: 'Adaptasi sangat baik, pertahankan komunikasi tim.',
       ),
-      JournalEntry(
+      PklJournalEntry(
         id: 'journal-002',
+        studentAccountId: '0054321980',
+        studentName: 'Ahmad Fauzi',
         title: 'Membuat halaman profil',
-        description: 'Menyusun tampilan halaman profil dan mempelajari widget dasar Flutter.',
+        description:
+            'Menyusun tampilan halaman profil dan mempelajari widget dasar Flutter.',
         date: '25 November 2026',
         time: '13.40',
         tag: 'Proyek',
-      ),
-      JournalEntry(
-        id: 'journal-003',
-        title: 'Belajar Git dan version control',
-        description: 'Mencoba membuat branch dan mencatat perubahan kode menggunakan Git.',
-        date: '24 November 2026',
-        time: '10.05',
-        tag: 'Pembelajaran',
+        imageUrl: PklPhotoPresets.coding,
+        isReviewedByTeacher: true,
+        teacherName: 'Budi Santoso, M.Pd.',
+        teacherNote: 'Struktur kode sudah rapi.',
       ),
     ],
     required this.onAddEntry,
   });
 
-  final List<JournalEntry> entries;
-  final ValueChanged<JournalEntry> onAddEntry;
+  final PklUser? student;
+  final List<PklJournalEntry> entries;
+  final ValueChanged<PklJournalEntry> onAddEntry;
 
   @override
   State<JournalScreen> createState() => _JournalScreenState();
@@ -63,11 +54,11 @@ class JournalScreen extends StatefulWidget {
 
 class _JournalScreenState extends State<JournalScreen> {
   Future<void> _openEntryForm() async {
-    final entry = await showModalBottomSheet<JournalEntry>(
+    final entry = await showModalBottomSheet<PklJournalEntry>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const _JournalFormSheet(),
+      builder: (context) => _JournalFormSheet(student: widget.student),
     );
     if (entry != null) widget.onAddEntry(entry);
   }
@@ -80,7 +71,7 @@ class _JournalScreenState extends State<JournalScreen> {
         children: [
           PageHeading(
             title: 'Jurnal kegiatan',
-            subtitle: 'Simpan pengalaman dan hal baru yang kamu pelajari.',
+            subtitle: 'Simpan kegiatan, foto dari perangkat, dan pantau validasi.',
             trailing: IconButton.filled(
               onPressed: _openEntryForm,
               tooltip: 'Tambah jurnal',
@@ -104,7 +95,7 @@ class _JournalScreenState extends State<JournalScreen> {
                 SizedBox(width: 11),
                 Expanded(
                   child: Text(
-                    'Catatan kecil hari ini bisa jadi bekal besar untuk masa depan.',
+                    'Lampirkan foto kegiatan dari perangkatmu agar Mentor IDUKA dan Guru Pembimbing dapat memvalidasi dan memberi masukan.',
                     style: TextStyle(
                       color: AppColors.taupe,
                       fontSize: 12,
@@ -166,12 +157,6 @@ class _JournalScreenState extends State<JournalScreen> {
               minimumSize: const Size.fromHeight(48),
             ),
           ),
-          const SizedBox(height: 14),
-          const Text(
-            'Jurnal tersimpan selama aplikasi demo terbuka.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, fontSize: 10),
-          ),
         ],
       ),
     );
@@ -181,7 +166,7 @@ class _JournalScreenState extends State<JournalScreen> {
 class _JournalCard extends StatelessWidget {
   const _JournalCard({required this.entry});
 
-  final JournalEntry entry;
+  final PklJournalEntry entry;
 
   @override
   Widget build(BuildContext context) {
@@ -209,11 +194,85 @@ class _JournalCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 11),
+          const SizedBox(height: 10),
           Text(entry.title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 6),
           Text(entry.description),
+          if (entry.imageBytes != null || entry.imageUrl != null) ...[
+            const SizedBox(height: 12),
+            PklPhotoThumbnail(
+              imageBytes: entry.imageBytes,
+              imageUrl: entry.imageUrl,
+              height: 145,
+              caption: entry.title,
+            ),
+          ],
           const SizedBox(height: 12),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              InfoPill(
+                label: entry.isValidatedByMentor
+                    ? 'Disetujui Mentor'
+                    : entry.isRejectedByMentor
+                        ? 'Ditolak Mentor'
+                        : 'Menunggu Mentor',
+                color: entry.isValidatedByMentor
+                    ? AppColors.paleGreen
+                    : entry.isRejectedByMentor
+                        ? AppColors.cream
+                        : AppColors.paleAmber,
+                textColor: entry.isValidatedByMentor
+                    ? AppColors.green
+                    : entry.isRejectedByMentor
+                        ? AppColors.maroon
+                        : AppColors.amber,
+                icon: entry.isValidatedByMentor
+                    ? Icons.verified_rounded
+                    : entry.isRejectedByMentor
+                        ? Icons.cancel_rounded
+                        : Icons.hourglass_top_rounded,
+              ),
+              InfoPill(
+                label: entry.isReviewedByTeacher
+                    ? 'Ditinjau Guru'
+                    : 'Menunggu Guru',
+                color: entry.isReviewedByTeacher
+                    ? AppColors.paleGreen
+                    : AppColors.paper,
+                textColor: entry.isReviewedByTeacher
+                    ? AppColors.green
+                    : AppColors.muted,
+                icon: entry.isReviewedByTeacher
+                    ? Icons.check_circle_rounded
+                    : Icons.schedule_rounded,
+              ),
+            ],
+          ),
+          if (entry.mentorNote != null && entry.mentorNote!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _NoteBox(
+              author: 'Masukan Mentor (${entry.mentorName ?? "IDUKA"})',
+              note: entry.mentorNote!,
+              color: entry.isRejectedByMentor
+                  ? AppColors.cream
+                  : AppColors.paleGreen,
+              accent: entry.isRejectedByMentor
+                  ? AppColors.maroon
+                  : AppColors.green,
+            ),
+          ],
+          if (entry.teacherNote != null && entry.teacherNote!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _NoteBox(
+              author: 'Catatan Guru (${entry.teacherName ?? "Pembimbing"})',
+              note: entry.teacherNote!,
+              color: AppColors.paper,
+              accent: AppColors.taupe,
+            ),
+          ],
+          const SizedBox(height: 10),
           Row(
             children: [
               const Icon(
@@ -223,7 +282,7 @@ class _JournalCard extends StatelessWidget {
               ),
               const SizedBox(width: 5),
               Text(
-                'Ditambahkan pukul ${entry.time}',
+                'Ditambahkan pukul ${entry.time} WIB',
                 style: const TextStyle(color: AppColors.muted, fontSize: 10),
               ),
             ],
@@ -234,8 +293,57 @@ class _JournalCard extends StatelessWidget {
   }
 }
 
+class _NoteBox extends StatelessWidget {
+  const _NoteBox({
+    required this.author,
+    required this.note,
+    required this.color,
+    required this.accent,
+  });
+
+  final String author;
+  final String note;
+  final Color color;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            author,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: accent,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            note,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.ink,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _JournalFormSheet extends StatefulWidget {
-  const _JournalFormSheet();
+  const _JournalFormSheet({this.student});
+  final PklUser? student;
 
   @override
   State<_JournalFormSheet> createState() => _JournalFormSheetState();
@@ -246,6 +354,8 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _tag = 'Kegiatan';
+  Uint8List? _photoBytes;
+  String? _photoName;
 
   @override
   void dispose() {
@@ -257,14 +367,17 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
   void _save() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final now = DateTime.now();
-    final entry = JournalEntry(
+    final entry = PklJournalEntry(
       id: now.microsecondsSinceEpoch.toString(),
+      studentAccountId: widget.student?.accountId ?? '0054321980',
+      studentName: widget.student?.name ?? 'Ahmad Fauzi',
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim(),
       date: currentDateLabel(),
       time:
           '${now.hour.toString().padLeft(2, '0')}.${now.minute.toString().padLeft(2, '0')}',
       tag: _tag,
+      imageBytes: _photoBytes,
     );
     Navigator.of(context).pop(entry);
   }
@@ -326,7 +439,8 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
                   maxLines: 5,
                   textCapitalization: TextCapitalization.sentences,
                   decoration: const InputDecoration(
-                    hintText: 'Tuliskan ringkasan kegiatan dan hal yang kamu pelajari...',
+                    hintText:
+                        'Tuliskan ringkasan kegiatan dan hal yang kamu pelajari...',
                     alignLabelWithHint: true,
                   ),
                   validator: (value) => value == null || value.trim().length < 8
@@ -356,6 +470,21 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
                   ],
                   onChanged: (value) =>
                       setState(() => _tag = value ?? 'Kegiatan'),
+                ),
+                const SizedBox(height: 15),
+                const _FormLabel('FOTO KEGIATAN (DARI PERANGKAT)'),
+                const SizedBox(height: 7),
+                DevicePhotoPickerBox(
+                  selectedBytes: _photoBytes,
+                  selectedFileName: _photoName,
+                  title: 'Upload Foto Kegiatan Jurnal',
+                  subtitle: 'Pilih foto dokumentasi dari perangkat Anda.',
+                  onPhotoSelected: (bytes, name) {
+                    setState(() {
+                      _photoBytes = bytes;
+                      _photoName = name;
+                    });
+                  },
                 ),
                 const SizedBox(height: 18),
                 ElevatedButton.icon(

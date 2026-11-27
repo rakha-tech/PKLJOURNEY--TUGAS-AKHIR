@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../models/pkl_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
 
-// Model pendukung & Data Dummy lokal khusus DashboardScreen
 class InternshipLocation {
   const InternshipLocation({
     required this.companyName,
@@ -14,62 +14,50 @@ class InternshipLocation {
   final String address;
 }
 
-class JournalEntry {
-  const JournalEntry({
-    required this.title,
-    required this.description,
-    required this.date,
-    required this.tag,
-    this.imageUrl,
-    this.isReviewed = false,
-  });
-
-  final String title;
-  final String description;
-  final String date;
-  final String tag;
-  final String? imageUrl;
-  final bool isReviewed;
-}
-
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({
     super.key,
     this.studentName = 'Rakha Pratama',
+    this.studentClass = 'XI RPL 2  •  Rekayasa Perangkat Lunak',
     this.hasCheckedIn = true,
     this.hasCheckedOut = false,
     this.checkInTime = '07.55',
     this.checkOutTime,
     this.journalCount = 14,
+    this.presentDays = 102,
+    this.schedule,
     this.workplaceLocation = const InternshipLocation(
       companyName: 'PT Aksara Digital Nusantara',
       address:
           'Gedung Menara Sudirman Lt. 12, Jl. Jend. Sudirman Kav. 28, Jakarta Pusat',
     ),
     this.idukaMentorName = 'Hendro Prasetyo, S.T.',
-    this.latestJournal = const JournalEntry(
-      title: 'Implementasi Slicing UI Dashboard & Integrasi Tema',
-      description:
-          'Menyelesaikan slicing antarmuka dashboard siswa PKL serta merapikan komponen tema maroon dan cream.',
-      date: 'Hari ini, 09.30 WIB',
-      tag: 'Proyek',
-      imageUrl: PklPhotoPresets.coding,
-      isReviewed: true,
-    ),
+    this.latestJournal,
+    this.notifications,
+    this.unreadNotificationCount = 2,
+    this.onNotificationsOpened,
+    this.onOpenHistory,
     this.onOpenAttendance,
     this.onOpenJournal,
     this.onOpenProgress,
   });
 
   final String studentName;
+  final String studentClass;
   final bool hasCheckedIn;
   final bool hasCheckedOut;
   final String? checkInTime;
   final String? checkOutTime;
   final int journalCount;
+  final int presentDays;
+  final InternshipSchedule? schedule;
   final InternshipLocation? workplaceLocation;
   final String idukaMentorName;
-  final JournalEntry? latestJournal;
+  final PklJournalEntry? latestJournal;
+  final List<PklNotificationItem>? notifications;
+  final int unreadNotificationCount;
+  final VoidCallback? onNotificationsOpened;
+  final VoidCallback? onOpenHistory;
   final VoidCallback? onOpenAttendance;
   final VoidCallback? onOpenJournal;
   final VoidCallback? onOpenProgress;
@@ -84,15 +72,37 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final activeSchedule = schedule ??
+        InternshipSchedule(
+          startDate: DateTime(2026, 7, 1),
+          endDate: DateTime(2026, 12, 31),
+          durationMonths: 6,
+        );
+    final totalWorkingDays = activeSchedule.totalWorkingDays;
+    final elapsedWorkingDays = activeSchedule.elapsedWorkingDays();
+    final remainingWorkingDays = activeSchedule.remainingWorkingDays();
+    final progress = activeSchedule.progressRatio();
+    final effectivePresent =
+        elapsedWorkingDays > 0 ? presentDays.clamp(0, elapsedWorkingDays) : 0;
+    final attendancePercent = elapsedWorkingDays > 0
+        ? ((effectivePresent / elapsedWorkingDays) * 100).round().clamp(0, 100)
+        : 100;
+
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: [
           Row(
-            children: const [
-              BrandMark(compact: true),
-              Spacer(),
-              PklNotificationButton(unreadCount: 2),
+            children: [
+              const BrandMark(compact: true),
+              const Spacer(),
+              if (onOpenHistory != null)
+                PklHistoryButton(onTap: onOpenHistory!),
+              PklNotificationButton(
+                unreadCount: unreadNotificationCount,
+                notifications: notifications,
+                onOpened: onNotificationsOpened,
+              ),
             ],
           ),
           const SizedBox(height: 18),
@@ -162,8 +172,8 @@ class DashboardScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     Row(
-                      children: const [
-                        CircleAvatar(
+                      children: [
+                        const CircleAvatar(
                           radius: 16,
                           backgroundColor: AppColors.cream,
                           child: Icon(
@@ -172,11 +182,11 @@ class DashboardScreen extends StatelessWidget {
                             size: 18,
                           ),
                         ),
-                        SizedBox(width: 10),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'XI RPL 2  •  Rekayasa Perangkat Lunak',
-                            style: TextStyle(
+                            studentClass,
+                            style: const TextStyle(
                               color: AppColors.cream,
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -192,15 +202,105 @@ class DashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 22),
 
-          // Ringkasan PKL Metric Cards
-          const SectionLabel('Ringkasan Kehadiran & Jurnal'),
+          // Ringkasan PKL Metric Cards & Durasi 6 Bulan (Sabtu-Minggu Libur)
+          const SectionLabel('Ringkasan Kehadiran & Durasi PKL'),
+          WhiteCard(
+            padding: 16,
+            onTap: onOpenAttendance,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: AppColors.cream,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.calendar_month_rounded,
+                        color: AppColors.maroon,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Masa PKL ${activeSchedule.durationMonths} Bulan',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            activeSchedule.periodLabel,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.muted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const InfoPill(
+                      label: 'Sabtu-Minggu Libur',
+                      color: AppColors.paleAmber,
+                      textColor: AppColors.amber,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 8,
+                    backgroundColor: AppColors.paper,
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(AppColors.maroon),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Berjalan: $elapsedWorkingDays / $totalWorkingDays hari kerja',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Sisa $remainingWorkingDays hari',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.maroon,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: _SummaryCard(
                   icon: Icons.fact_check_rounded,
-                  value: '98%',
-                  label: 'Kehadiran Terverifikasi',
+                  value: '$attendancePercent%',
+                  label: '$effectivePresent/$elapsedWorkingDays Hari Hadir',
                   accent: AppColors.green,
                   onTap: onOpenAttendance,
                 ),
@@ -283,16 +383,16 @@ class DashboardScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       InfoPill(
-                        label: latestJournal!.isReviewed
-                            ? 'Disetujui'
-                            : 'Menunggu Review',
-                        color: latestJournal!.isReviewed
+                        label: latestJournal!.isFullyReviewed
+                            ? 'Tervalidasi'
+                            : 'Menunggu Validasi',
+                        color: latestJournal!.isFullyReviewed
                             ? AppColors.paleGreen
                             : AppColors.paleAmber,
-                        textColor: latestJournal!.isReviewed
+                        textColor: latestJournal!.isFullyReviewed
                             ? AppColors.green
                             : AppColors.amber,
-                        icon: latestJournal!.isReviewed
+                        icon: latestJournal!.isFullyReviewed
                             ? Icons.check_circle_rounded
                             : Icons.hourglass_top_rounded,
                       ),
@@ -325,17 +425,14 @@ class DashboardScreen extends StatelessWidget {
                       color: AppColors.muted,
                     ),
                   ),
-                  if (latestJournal!.imageUrl != null) ...[
+                  if (latestJournal!.imageBytes != null ||
+                      latestJournal!.imageUrl != null) ...[
                     const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        latestJournal!.imageUrl!,
-                        height: 90,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                      ),
+                    PklPhotoThumbnail(
+                      imageBytes: latestJournal!.imageBytes,
+                      imageUrl: latestJournal!.imageUrl,
+                      height: 100,
+                      caption: latestJournal!.title,
                     ),
                   ],
                 ],

@@ -254,6 +254,7 @@ class TeacherDashboardScreen extends StatelessWidget {
     this.onOpenStudents,
     this.onOpenReviews,
     this.onOpenAttendance,
+    this.onOpenHistory,
   });
 
   final PklUser? user;
@@ -262,6 +263,7 @@ class TeacherDashboardScreen extends StatelessWidget {
   final VoidCallback? onOpenStudents;
   final VoidCallback? onOpenReviews;
   final VoidCallback? onOpenAttendance;
+  final VoidCallback? onOpenHistory;
 
   static const PklUser _defaultTeacher = PklUser(
     username: 'guru',
@@ -319,18 +321,26 @@ class TeacherDashboardScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: [
-          const Row(
+          Row(
             children: [
-              BrandMark(compact: true),
-              Spacer(),
-              InfoPill(
+              const BrandMark(compact: true),
+              const Spacer(),
+              const InfoPill(
                 label: 'GURU PEMBIMBING',
                 color: AppColors.paleGreen,
                 textColor: AppColors.green,
                 icon: Icons.person_pin_outlined,
               ),
-              SizedBox(width: 6),
-              PklNotificationButton(unreadCount: 2),
+              if (onOpenHistory != null) ...[
+                const SizedBox(width: 4),
+                IconButton(
+                  onPressed: onOpenHistory,
+                  tooltip: 'Riwayat Aktivitas',
+                  icon: const Icon(Icons.history_rounded, color: AppColors.ink),
+                ),
+              ],
+              const SizedBox(width: 2),
+              const PklNotificationButton(unreadCount: 2),
             ],
           ),
           const SizedBox(height: 22),

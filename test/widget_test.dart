@@ -1,30 +1,96 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 
-import 'package:pkljourney/main.dart';
+import 'package:pkljourney/models/pkl_models.dart';
+import 'package:pkljourney/services/pkl_store.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  test('InternshipSchedule menghitung hari kerja 6 bulan tanpa Sabtu & Minggu',
+      () {
+    // 1 minggu penuh (Senin 23 Nov - Minggu 29 Nov 2026) = 5 hari kerja
+    final oneWeek = InternshipSchedule.countWorkingDays(
+      DateTime(2026, 11, 23),
+      DateTime(2026, 11, 29),
+    );
+    expect(oneWeek, 5);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // 6 bulan (1 Jul 2026 - 31 Des 2026)
+    final sixMonths = InternshipSchedule(
+      startDate: DateTime(2026, 7, 1),
+      endDate: DateTime(2026, 12, 31),
+      durationMonths: 6,
+    );
+    expect(sixMonths.durationMonths, 6);
+    expect(sixMonths.totalWorkingDays, 132);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  test('PklStore mendukung CRUD Admin, Edit Profil, Presensi, Jurnal & Riwayat',
+      () {
+    final store = PklStore();
+    final initialCount = store.users.length;
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // 1. Admin Create
+    const newStudent = PklUser(
+      accountId: '0099887766',
+      username: 'bintang',
+      name: 'Bintang Pratama',
+      role: UserRole.murid,
+    );
+    expect(store.addUser(newStudent), isTrue);
+    expect(store.users.length, initialCount + 1);
+
+    // 2. Admin Update / Edit Profil
+    final updated = newStudent.copyWith(name: 'Bintang Pratama Putra');
+    expect(
+      store.updateUser(
+        originalAccountId: '0099887766',
+        originalRole: UserRole.murid,
+        updated: updated,
+        isSelfProfileEdit: true,
+      ),
+      isTrue,
+    );
+    expect(
+      store.users.firstWhere((u) => u.accountId == '0099887766').name,
+      'Bintang Pratama Putra',
+    );
+
+    // 3. Murid Presensi Masuk & Pulang dengan foto
+    final dummyPhoto = Uint8List.fromList([1, 2, 3, 4]);
+    store.recordCheckIn(student: updated, photoBytes: dummyPhoto);
+    store.recordCheckOut(student: updated, photoBytes: dummyPhoto);
+    final studentAtt = store.attendanceForStudent('0099887766');
+    expect(studentAtt, isNotEmpty);
+    expect(studentAtt.first.checkInPhotoBytes, isNotNull);
+    expect(studentAtt.first.checkOutPhotoBytes, isNotNull);
+
+    // 4. Murid Jurnal + Validasi & Masukan Mentor IDUKA
+    store.addJournal(
+      student: updated,
+      title: 'Belajar Flutter Widget',
+      description: 'Membuat form upload foto presensi dan jurnal.',
+      tag: 'Proyek',
+      imageBytes: dummyPhoto,
+    );
+    final studentJournals = store.journalsForStudent('0099887766');
+    expect(studentJournals, isNotEmpty);
+
+    final mentor = store.users.firstWhere((u) => u.role == UserRole.iduka);
+    store.validateJournalByMentor(
+      journalId: studentJournals.first.id,
+      mentor: mentor,
+      approve: true,
+      note: 'Mantap, dokumentasi jelas.',
+    );
+    final validated = store.journalsForStudent('0099887766').first;
+    expect(validated.isValidatedByMentor, isTrue);
+    expect(validated.mentorNote, 'Mantap, dokumentasi jelas.');
+
+    // 5. Riwayat tercatat untuk semua aktivitas
+    expect(store.history.length, greaterThanOrEqualTo(5));
+
+    // 6. Admin Delete
+    store.deleteUser(updated);
+    expect(store.users.length, initialCount);
   });
 }

@@ -1,60 +1,31 @@
 import 'package:flutter/material.dart';
+
+import '../models/pkl_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
-
-class TeacherReviewItem {
-  final String id;
-  final String studentName;
-  final String studentId;
-  final String title;
-  final String description;
-  final String date;
-  final String time;
-  final String? imageUrl;
-  final bool isReviewed;
-  final String? teacherNote;
-
-  const TeacherReviewItem({
-    required this.id,
-    required this.studentName,
-    required this.studentId,
-    required this.title,
-    required this.description,
-    required this.date,
-    required this.time,
-    this.imageUrl,
-    this.isReviewed = false,
-    this.teacherNote,
-  });
-
-  TeacherReviewItem copyWith({
-    bool? isReviewed,
-    String? teacherNote,
-  }) {
-    return TeacherReviewItem(
-      id: id,
-      studentName: studentName,
-      studentId: studentId,
-      title: title,
-      description: description,
-      date: date,
-      time: time,
-      imageUrl: imageUrl,
-      isReviewed: isReviewed ?? this.isReviewed,
-      teacherNote: teacherNote ?? this.teacherNote,
-    );
-  }
-}
 
 class TeacherReviewsScreen extends StatefulWidget {
   const TeacherReviewsScreen({
     super.key,
+    this.isIduka = false,
+    this.reviewerName = 'Pembimbing',
     this.initialReviews,
-    this.onMarkReviewed,
+    this.onReviewTeacher,
+    this.onValidateMentor,
+    this.notifications,
+    this.unreadNotificationCount = 2,
+    this.onNotificationsOpened,
   });
 
-  final List<TeacherReviewItem>? initialReviews;
-  final void Function(String entryId, {String? teacherNote})? onMarkReviewed;
+  final bool isIduka;
+  final String reviewerName;
+  final List<PklJournalEntry>? initialReviews;
+  final void Function(String journalId, {String? note})? onReviewTeacher;
+  final void Function(String journalId, {required bool approve, String? note})?
+      onValidateMentor;
+  final List<PklNotificationItem>? notifications;
+  final int unreadNotificationCount;
+  final VoidCallback? onNotificationsOpened;
 
   @override
   State<TeacherReviewsScreen> createState() => _TeacherReviewsScreenState();
@@ -63,54 +34,66 @@ class TeacherReviewsScreen extends StatefulWidget {
 class _TeacherReviewsScreenState extends State<TeacherReviewsScreen> {
   String _filter = 'Semua';
 
-  late final List<TeacherReviewItem> _reviews = widget.initialReviews != null
-      ? List.from(widget.initialReviews!)
-      : [
-          const TeacherReviewItem(
-            id: 'j-01',
-            studentName: 'Frida Awan',
-            studentId: '007812121134',
-            title: 'Slicing UI dashboard guru pembimbing',
-            description:
-                'Menyusun komponen kartu ringkasan, tombol notifikasi, dan daftar murid bimbingan sesuai rancangan Figma.',
-            date: '20 Nov 2026',
-            time: '14.30',
-            imageUrl:
-                'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&q=80',
-            isReviewed: false,
-          ),
-          const TeacherReviewItem(
-            id: 'j-02',
-            studentName: 'Frida Awan',
-            studentId: '007812121134',
-            title: 'Integrasi widget presensi mandiri',
-            description:
-                'Menambahkan status check-in, check-out, dan riwayat presensi harian siswa.',
-            date: '19 Nov 2026',
-            time: '16.05',
-            imageUrl:
-                'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&q=80',
-            isReviewed: true,
-            teacherNote: 'Bagus, teruskan dokumentasi kodenya.',
-          ),
-          const TeacherReviewItem(
-            id: 'j-03',
-            studentName: 'Muhammad Rakha',
-            studentId: '008127658190',
-            title: 'Review layout dan responsiveness halaman murid',
-            description:
-                'Menguji tampilan pada berbagai ukuran layar ponsel dan memperbaiki padding berlebih.',
-            date: '18 Nov 2026',
-            time: '15.10',
-            imageUrl:
-                'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80',
-            isReviewed: false,
-          ),
-        ];
+  late List<PklJournalEntry> _reviews;
 
-  void _openReviewDialog(BuildContext context, TeacherReviewItem item) {
+  @override
+  void initState() {
+    super.initState();
+    _reviews = widget.initialReviews != null
+        ? List.from(widget.initialReviews!)
+        : [
+            const PklJournalEntry(
+              id: 'j-01',
+              studentName: 'Ahmad Fauzi',
+              studentAccountId: '0054321980',
+              title: 'Slicing UI dashboard guru pembimbing',
+              description:
+                  'Menyusun komponen kartu ringkasan, tombol notifikasi, dan daftar murid bimbingan sesuai rancangan.',
+              date: '26 Nov 2026',
+              time: '14.30',
+              tag: 'Proyek',
+              imageUrl: PklPhotoPresets.meeting,
+            ),
+            const PklJournalEntry(
+              id: 'j-02',
+              studentName: 'Siti Nurhaliza',
+              studentAccountId: '0054321981',
+              title: 'Integrasi widget presensi mandiri',
+              description:
+                  'Menambahkan status check-in, check-out, dan riwayat presensi harian siswa.',
+              date: '25 Nov 2026',
+              time: '16.05',
+              tag: 'Proyek',
+              imageUrl: PklPhotoPresets.coding,
+              isReviewedByTeacher: true,
+              teacherNote: 'Bagus, teruskan dokumentasi kodenya.',
+              teacherName: 'Budi Santoso, M.Pd.',
+              isValidatedByMentor: true,
+              mentorNote: 'Sesuai standar tim.',
+              mentorName: 'Hendro Prasetyo, S.T.',
+            ),
+          ];
+  }
+
+  @override
+  void didUpdateWidget(covariant TeacherReviewsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialReviews != null &&
+        widget.initialReviews != oldWidget.initialReviews) {
+      _reviews = List.from(widget.initialReviews!);
+    }
+  }
+
+  bool _isDoneForCurrentRole(PklJournalEntry item) {
+    return widget.isIduka
+        ? (item.isValidatedByMentor || item.isRejectedByMentor)
+        : item.isReviewedByTeacher;
+  }
+
+  void _openReviewDialog(BuildContext context, PklJournalEntry item) {
+    final existingNote = widget.isIduka ? item.mentorNote : item.teacherNote;
     final noteController = TextEditingController(
-      text: item.teacherNote ?? 'Kegiatan PKL terverifikasi dengan baik.',
+      text: existingNote ?? 'Kegiatan PKL terlaksana dengan baik.',
     );
 
     showModalBottomSheet<void>(
@@ -148,8 +131,14 @@ class _TeacherReviewsScreenState extends State<TeacherReviewsScreen> {
                       const Icon(Icons.rate_review_rounded,
                           color: AppColors.maroon, size: 22),
                       const SizedBox(width: 8),
-                      Text('Tinjau & Beri Feedback',
-                          style: Theme.of(sheetContext).textTheme.headlineSmall),
+                      Expanded(
+                        child: Text(
+                          widget.isIduka
+                              ? 'Validasi & Masukan Mentor'
+                              : 'Tinjau & Beri Masukan',
+                          style: Theme.of(sheetContext).textTheme.headlineSmall,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -157,10 +146,21 @@ class _TeacherReviewsScreenState extends State<TeacherReviewsScreen> {
                     'Murid: ${item.studentName} • ${item.title}',
                     style: const TextStyle(color: AppColors.muted, fontSize: 12),
                   ),
+                  if (item.imageBytes != null || item.imageUrl != null) ...[
+                    const SizedBox(height: 12),
+                    PklPhotoThumbnail(
+                      imageBytes: item.imageBytes,
+                      imageUrl: item.imageUrl,
+                      height: 130,
+                      caption: item.title,
+                    ),
+                  ],
                   const SizedBox(height: 16),
-                  const Text(
-                    'CATATAN / MASUKAN PEMBIMBING',
-                    style: TextStyle(
+                  Text(
+                    widget.isIduka
+                        ? 'MASUKAN / CATATAN MENTOR IDUKA'
+                        : 'CATATAN / MASUKAN GURU PEMBIMBING',
+                    style: const TextStyle(
                       color: AppColors.taupe,
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
@@ -177,34 +177,117 @@ class _TeacherReviewsScreenState extends State<TeacherReviewsScreen> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      final note = noteController.text.trim();
-                      setState(() {
-                        final index =
-                            _reviews.indexWhere((r) => r.id == item.id);
-                        if (index != -1) {
-                          _reviews[index] = _reviews[index].copyWith(
-                            isReviewed: true,
-                            teacherNote: note.isEmpty ? null : note,
-                          );
-                        }
-                      });
-                      widget.onMarkReviewed?.call(
-                        item.id,
-                        teacherNote: note.isEmpty ? null : note,
-                      );
-                      Navigator.pop(sheetContext);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Jurnal dan catatan berhasil diverifikasi.'),
-                          behavior: SnackBarBehavior.floating,
+                  if (widget.isIduka)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              final note = noteController.text.trim();
+                              setState(() {
+                                final idx =
+                                    _reviews.indexWhere((r) => r.id == item.id);
+                                if (idx != -1) {
+                                  _reviews[idx] = _reviews[idx].copyWith(
+                                    isValidatedByMentor: false,
+                                    isRejectedByMentor: true,
+                                    mentorNote: note.isEmpty ? null : note,
+                                    mentorName: widget.reviewerName,
+                                  );
+                                }
+                              });
+                              widget.onValidateMentor?.call(
+                                item.id,
+                                approve: false,
+                                note: note,
+                              );
+                              Navigator.pop(sheetContext);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Jurnal ditolak beserta catatan masukan.'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.close_rounded),
+                            label: const Text('Tolak'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.maroon,
+                              side: const BorderSide(color: AppColors.maroon),
+                              minimumSize: const Size.fromHeight(48),
+                            ),
+                          ),
                         ),
-                      );
-                    },
-                    icon: const Icon(Icons.check_circle_rounded),
-                    label: const Text('Setujui & Simpan Catatan'),
-                  ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              final note = noteController.text.trim();
+                              setState(() {
+                                final idx =
+                                    _reviews.indexWhere((r) => r.id == item.id);
+                                if (idx != -1) {
+                                  _reviews[idx] = _reviews[idx].copyWith(
+                                    isValidatedByMentor: true,
+                                    isRejectedByMentor: false,
+                                    mentorNote: note.isEmpty ? null : note,
+                                    mentorName: widget.reviewerName,
+                                  );
+                                }
+                              });
+                              widget.onValidateMentor?.call(
+                                item.id,
+                                approve: true,
+                                note: note,
+                              );
+                              Navigator.pop(sheetContext);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Jurnal disetujui dan masukan tersimpan.'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.check_circle_rounded),
+                            label: const Text('Setujui & Simpan'),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        final note = noteController.text.trim();
+                        setState(() {
+                          final idx =
+                              _reviews.indexWhere((r) => r.id == item.id);
+                          if (idx != -1) {
+                            _reviews[idx] = _reviews[idx].copyWith(
+                              isReviewedByTeacher: true,
+                              teacherNote: note.isEmpty ? null : note,
+                              teacherName: widget.reviewerName,
+                            );
+                          }
+                        });
+                        widget.onReviewTeacher?.call(
+                          item.id,
+                          note: note.isEmpty ? null : note,
+                        );
+                        Navigator.pop(sheetContext);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text('Jurnal dan masukan berhasil disimpan.'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.check_circle_rounded),
+                      label: const Text('Simpan Masukan Guru'),
+                    ),
                 ],
               ),
             ),
@@ -216,11 +299,12 @@ class _TeacherReviewsScreenState extends State<TeacherReviewsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final pendingCount = _reviews.where((review) => !review.isReviewed).length;
+    final pendingCount =
+        _reviews.where((review) => !_isDoneForCurrentRole(review)).length;
 
     final filtered = _reviews.where((r) {
-      if (_filter == 'Menunggu') return !r.isReviewed;
-      if (_filter == 'Selesai') return r.isReviewed;
+      if (_filter == 'Menunggu') return !_isDoneForCurrentRole(r);
+      if (_filter == 'Selesai') return _isDoneForCurrentRole(r);
       return true;
     }).toList();
 
@@ -229,8 +313,10 @@ class _TeacherReviewsScreenState extends State<TeacherReviewsScreen> {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         children: [
           PageHeading(
-            title: 'Tinjau Jurnal',
-            subtitle: 'Evaluasi catatan kegiatan dan dokumentasi murid bimbingan.',
+            title: widget.isIduka ? 'Validasi Jurnal' : 'Tinjau Jurnal',
+            subtitle: widget.isIduka
+                ? 'Validasi kegiatan dan beri masukan jurnal murid PKL.'
+                : 'Evaluasi catatan kegiatan dan dokumentasi murid bimbingan.',
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -244,7 +330,11 @@ class _TeacherReviewsScreenState extends State<TeacherReviewsScreen> {
                   icon: Icons.rate_review_outlined,
                 ),
                 const SizedBox(width: 6),
-                const PklNotificationButton(unreadCount: 2),
+                PklNotificationButton(
+                  unreadCount: widget.unreadNotificationCount,
+                  notifications: widget.notifications,
+                  onOpened: widget.onNotificationsOpened,
+                ),
               ],
             ),
           ),
@@ -296,145 +386,155 @@ class _TeacherReviewsScreenState extends State<TeacherReviewsScreen> {
             )
           else
             ...filtered.map(
-              (review) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: WhiteCard(
-                  padding: 16,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 14,
-                            backgroundColor: AppColors.cream,
-                            child: Text(
-                              review.studentName.isEmpty
-                                  ? '?'
-                                  : review.studentName[0].toUpperCase(),
-                              style: const TextStyle(
-                                color: AppColors.maroon,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              review.studentName,
-                              style: const TextStyle(
-                                color: AppColors.ink,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          InfoPill(
-                            label: review.isReviewed
-                                ? 'Disetujui'
-                                : 'Perlu Tinjauan',
-                            color: review.isReviewed
-                                ? AppColors.paleGreen
-                                : AppColors.paleAmber,
-                            textColor: review.isReviewed
-                                ? AppColors.green
-                                : AppColors.amber,
-                            icon: review.isReviewed
-                                ? Icons.check_circle_rounded
-                                : Icons.schedule_rounded,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        review.title,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        review.description,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.ink,
-                              height: 1.45,
-                            ),
-                      ),
-                      if (review.imageUrl != null) ...[
-                        const SizedBox(height: 10),
-                        PklPhotoThumbnail(
-                          imageUrl: review.imageUrl!,
-                          height: 140,
-                          caption:
-                              'Dokumentasi: ${review.studentName} - ${review.title}',
-                        ),
-                      ],
-                      if (review.teacherNote != null &&
-                          review.teacherNote!.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.paleGreen,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.comment_rounded,
-                                  color: AppColors.green, size: 16),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  'Catatan Anda: "${review.teacherNote}"',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontStyle: FontStyle.italic,
-                                    color: AppColors.ink,
-                                  ),
+              (review) {
+                final done = _isDoneForCurrentRole(review);
+                final roleNote =
+                    widget.isIduka ? review.mentorNote : review.teacherNote;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: WhiteCard(
+                    padding: 16,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 14,
+                              backgroundColor: AppColors.cream,
+                              child: Text(
+                                review.studentName.isEmpty
+                                    ? '?'
+                                    : review.studentName[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: AppColors.maroon,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                review.studentName,
+                                style: const TextStyle(
+                                  color: AppColors.ink,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            InfoPill(
+                              label: widget.isIduka
+                                  ? (review.isValidatedByMentor
+                                      ? 'Disetujui Mentor'
+                                      : review.isRejectedByMentor
+                                          ? 'Ditolak Mentor'
+                                          : 'Perlu Validasi')
+                                  : (review.isReviewedByTeacher
+                                      ? 'Ditinjau Guru'
+                                      : 'Perlu Tinjauan'),
+                              color: done
+                                  ? (review.isRejectedByMentor && widget.isIduka
+                                      ? AppColors.cream
+                                      : AppColors.paleGreen)
+                                  : AppColors.paleAmber,
+                              textColor: done
+                                  ? (review.isRejectedByMentor && widget.isIduka
+                                      ? AppColors.maroon
+                                      : AppColors.green)
+                                  : AppColors.amber,
+                              icon: done
+                                  ? Icons.check_circle_rounded
+                                  : Icons.schedule_rounded,
+                            ),
+                          ],
                         ),
-                      ],
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Text(
-                            '${review.date} • ${review.time} WIB',
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 10,
-                            ),
+                        const SizedBox(height: 10),
+                        Text(
+                          review.title,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          review.description,
+                          style: const TextStyle(
+                              color: AppColors.muted, fontSize: 12),
+                        ),
+                        if (review.imageBytes != null ||
+                            review.imageUrl != null) ...[
+                          const SizedBox(height: 12),
+                          PklPhotoThumbnail(
+                            imageBytes: review.imageBytes,
+                            imageUrl: review.imageUrl,
+                            height: 150,
+                            caption:
+                                '${review.studentName} • ${review.title}',
                           ),
-                          const Spacer(),
-                          TextButton.icon(
-                            onPressed: () =>
-                                _openReviewDialog(context, review),
-                            icon: Icon(
-                              review.isReviewed
-                                  ? Icons.edit_note_rounded
-                                  : Icons.check_circle_outline_rounded,
-                              size: 16,
+                        ],
+                        if (roleNote != null && roleNote.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.paper,
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            label: Text(
-                              review.isReviewed
-                                  ? 'Ubah Catatan'
-                                  : 'Beri Masukan / Setujui',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.maroon,
+                            child: Text(
+                              '${widget.isIduka ? "Masukan Mentor" : "Catatan Guru"}: $roleNote',
+                              style: const TextStyle(
+                                color: AppColors.taupe,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
-                      ),
-                    ],
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${review.date} • ${review.time} WIB',
+                                style: const TextStyle(
+                                    color: AppColors.muted, fontSize: 10),
+                              ),
+                            ),
+                            FilledButton.tonalIcon(
+                              onPressed: () =>
+                                  _openReviewDialog(context, review),
+                              icon: Icon(
+                                done
+                                    ? Icons.edit_note_rounded
+                                    : Icons.rate_review_rounded,
+                                size: 17,
+                              ),
+                              label: Text(
+                                done
+                                    ? 'Ubah Masukan'
+                                    : (widget.isIduka
+                                        ? 'Validasi & Masukan'
+                                        : 'Tinjau & Beri Catatan'),
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: done
+                                    ? AppColors.paper
+                                    : AppColors.maroon,
+                                foregroundColor:
+                                    done ? AppColors.ink : Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
         ],
       ),

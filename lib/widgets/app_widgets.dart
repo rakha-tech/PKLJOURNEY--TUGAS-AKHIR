@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../models/pkl_models.dart';
 import '../theme/app_theme.dart';
 
 abstract final class PklPhotoPresets {
@@ -363,10 +366,32 @@ class _LiveClockWidgetState extends State<LiveClockWidget> {
   }
 }
 
+class PklHistoryButton extends StatelessWidget {
+  const PklHistoryButton({super.key, required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.history_rounded, color: AppColors.ink),
+      tooltip: 'Riwayat Aktivitas',
+      onPressed: onTap,
+    );
+  }
+}
+
 class PklNotificationButton extends StatelessWidget {
-  const PklNotificationButton({super.key, this.unreadCount = 2});
+  const PklNotificationButton({
+    super.key,
+    this.unreadCount = 2,
+    this.notifications,
+    this.onOpened,
+  });
 
   final int unreadCount;
+  final List<PklNotificationItem>? notifications;
+  final VoidCallback? onOpened;
 
   @override
   Widget build(BuildContext context) {
@@ -376,11 +401,14 @@ class PklNotificationButton extends StatelessWidget {
           icon: const Icon(Icons.notifications_outlined, color: AppColors.ink),
           tooltip: 'Notifikasi',
           onPressed: () {
+            onOpened?.call();
             showModalBottomSheet<void>(
               context: context,
               backgroundColor: Colors.transparent,
               isScrollControlled: true,
-              builder: (context) => const _NotificationBottomSheet(),
+              builder: (context) => _NotificationBottomSheet(
+                items: notifications,
+              ),
             );
           },
         ),
@@ -412,36 +440,48 @@ class PklNotificationButton extends StatelessWidget {
 }
 
 class _NotificationBottomSheet extends StatelessWidget {
-  const _NotificationBottomSheet();
+  const _NotificationBottomSheet({this.items});
+
+  final List<PklNotificationItem>? items;
 
   @override
   Widget build(BuildContext context) {
-    final notifications = [
-      (
-        title: 'Jurnal Disetujui Pembimbing',
-        body:
-            'Budi Santoso, S.Kom. telah memeriksa dan menyetujui jurnal "Orientasi lingkungan kerja".',
-        time: '15 menit lalu',
-        icon: Icons.verified_rounded,
-        color: AppColors.green,
-      ),
-      (
-        title: 'Geofencing Lokasi Aktif',
-        body:
-            'Posisi Anda terverifikasi berada di dalam radius 50m PT Aksara Digital Nusantara.',
-        time: '1 jam lalu',
-        icon: Icons.location_on_rounded,
-        color: AppColors.maroon,
-      ),
-      (
-        title: 'Pengingat Presensi Pulang',
-        body:
-            'Jam kerja PKL berakhir pukul 16.00 WIB. Pastikan mencatat kehadiran pulang tepat waktu.',
-        time: '3 jam lalu',
-        icon: Icons.alarm_rounded,
-        color: AppColors.amber,
-      ),
-    ];
+    final notifications = items != null
+        ? items!
+            .map((e) => (
+                  title: e.title,
+                  body: e.body,
+                  time: e.time,
+                  icon: Icons.notifications_active_rounded,
+                  color: AppColors.maroon,
+                ))
+            .toList()
+        : [
+            (
+              title: 'Jurnal Disetujui Pembimbing',
+              body:
+                  'Budi Santoso, S.Kom. telah memeriksa dan menyetujui jurnal "Orientasi lingkungan kerja".',
+              time: '15 menit lalu',
+              icon: Icons.verified_rounded,
+              color: AppColors.green,
+            ),
+            (
+              title: 'Geofencing Lokasi Aktif',
+              body:
+                  'Posisi Anda terverifikasi berada di dalam radius 50m PT Aksara Digital Nusantara.',
+              time: '1 jam lalu',
+              icon: Icons.location_on_rounded,
+              color: AppColors.maroon,
+            ),
+            (
+              title: 'Pengingat Presensi Pulang',
+              body:
+                  'Jam kerja PKL berakhir pukul 16.00 WIB. Pastikan mencatat kehadiran pulang tepat waktu.',
+              time: '3 jam lalu',
+              icon: Icons.alarm_rounded,
+              color: AppColors.amber,
+            ),
+          ];
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
@@ -451,89 +491,103 @@ class _NotificationBottomSheet extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(4),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.line,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Icon(Icons.notifications_active_rounded,
-                    color: AppColors.maroon, size: 22),
-                const SizedBox(width: 8),
-                Text('Notifikasi PKL',
-                    style: Theme.of(context).textTheme.headlineSmall),
-                const Spacer(),
-                const InfoPill(
-                  label: '3 Baru',
-                  color: AppColors.paleAmber,
-                  textColor: AppColors.amber,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ...notifications.map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Container(
-                    padding: const EdgeInsets.all(13),
-                    decoration: BoxDecoration(
-                      color: AppColors.paper,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.line),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          radius: 17,
-                          backgroundColor: item.color.withOpacity(0.12),
-                          child:
-                              Icon(item.icon, size: 18, color: item.color),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item.title,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
-                                    color: AppColors.ink,
-                                  )),
-                              const SizedBox(height: 4),
-                              Text(
-                                item.body,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.muted,
-                                  height: 1.4,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(item.time,
-                                  style: const TextStyle(
-                                      fontSize: 10,
-                                      color: AppColors.taupe,
-                                      fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ),
-                      ],
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Icon(Icons.notifications_active_rounded,
+                      color: AppColors.maroon, size: 22),
+                  const SizedBox(width: 8),
+                  Text('Notifikasi PKL',
+                      style: Theme.of(context).textTheme.headlineSmall),
+                  const Spacer(),
+                  InfoPill(
+                    label: '${notifications.length} Info',
+                    color: AppColors.paleAmber,
+                    textColor: AppColors.amber,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (notifications.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Text(
+                      'Belum ada notifikasi baru.',
+                      style: TextStyle(color: AppColors.muted, fontSize: 13),
                     ),
                   ),
-                )),
-          ],
+                )
+              else
+                ...notifications.take(6).map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Container(
+                        padding: const EdgeInsets.all(13),
+                        decoration: BoxDecoration(
+                          color: AppColors.paper,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.line),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: 17,
+                              backgroundColor:
+                                  item.color.withValues(alpha: 0.12),
+                              child:
+                                  Icon(item.icon, size: 18, color: item.color),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(item.title,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                        color: AppColors.ink,
+                                      )),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item.body,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.muted,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(item.time,
+                                      style: const TextStyle(
+                                          fontSize: 10,
+                                          color: AppColors.taupe,
+                                          fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )),
+            ],
+          ),
         ),
       ),
     );
@@ -543,14 +597,53 @@ class _NotificationBottomSheet extends StatelessWidget {
 class PklPhotoThumbnail extends StatelessWidget {
   const PklPhotoThumbnail({
     super.key,
-    required this.imageUrl,
+    this.imageUrl,
+    this.imageBytes,
     this.height = 140,
     this.caption,
   });
 
-  final String imageUrl;
+  final String? imageUrl;
+  final Uint8List? imageBytes;
   final double height;
   final String? caption;
+
+  Widget _buildImage({double? targetHeight}) {
+    if (imageBytes != null) {
+      return Image.memory(
+        imageBytes!,
+        height: targetHeight,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) =>
+            _fallbackPhotoBox(height: targetHeight ?? height),
+      );
+    }
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      return Image.network(
+        imageUrl!,
+        height: targetHeight,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            height: targetHeight ?? height,
+            color: AppColors.paper,
+            child: const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.maroon,
+              ),
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) =>
+            _fallbackPhotoBox(height: targetHeight ?? height),
+      );
+    }
+    return _fallbackPhotoBox(height: targetHeight ?? height);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -566,22 +659,7 @@ class PklPhotoThumbnail extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(20),
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        height: 250,
-                        color: AppColors.paper,
-                        child: const Center(
-                          child: CircularProgressIndicator(color: AppColors.maroon),
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) =>
-                        _fallbackPhotoBox(height: 250),
-                  ),
+                  child: _buildImage(),
                 ),
                 if (caption != null) ...[
                   const SizedBox(height: 10),
@@ -589,7 +667,7 @@ class PklPhotoThumbnail extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.75),
+                      color: Colors.black.withValues(alpha: 0.75),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -620,24 +698,7 @@ class PklPhotoThumbnail extends StatelessWidget {
             SizedBox(
               height: height,
               width: double.infinity,
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    color: AppColors.paper,
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.maroon,
-                      ),
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) =>
-                    _fallbackPhotoBox(height: height),
-              ),
+              child: _buildImage(targetHeight: height),
             ),
             Positioned(
               right: 8,
@@ -645,7 +706,7 @@ class PklPhotoThumbnail extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.65),
+                  color: Colors.black.withValues(alpha: 0.65),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Row(
@@ -695,6 +756,133 @@ class PklPhotoThumbnail extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Widget pemilih foto dari perangkat pengguna.
+class DevicePhotoPickerBox extends StatelessWidget {
+  const DevicePhotoPickerBox({
+    super.key,
+    required this.selectedBytes,
+    required this.selectedFileName,
+    required this.onPhotoSelected,
+    this.title = 'Upload Foto dari Perangkat',
+    this.subtitle = 'Pilih foto bukti kegiatan dari perangkat Anda.',
+  });
+
+  final Uint8List? selectedBytes;
+  final String? selectedFileName;
+  final void Function(Uint8List bytes, String fileName) onPhotoSelected;
+  final String title;
+  final String subtitle;
+
+  Future<void> _pick(BuildContext context) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1280,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      onPhotoSelected(bytes, picked.name);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal memilih foto dari perangkat: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.paper,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: selectedBytes != null ? AppColors.green : AppColors.line,
+          width: selectedBytes != null ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                selectedBytes != null
+                    ? Icons.check_circle_rounded
+                    : Icons.add_photo_alternate_outlined,
+                color:
+                    selectedBytes != null ? AppColors.green : AppColors.maroon,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                    Text(
+                      selectedFileName != null
+                          ? 'Terpilih: $selectedFileName'
+                          : subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (selectedBytes != null) ...[
+            const SizedBox(height: 12),
+            PklPhotoThumbnail(
+              imageBytes: selectedBytes,
+              height: 130,
+              caption: selectedFileName ?? 'Foto Terpilih',
+            ),
+          ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _pick(context),
+              icon: const Icon(Icons.photo_library_outlined, size: 17),
+              label: Text(
+                selectedBytes != null
+                    ? 'Ganti Foto dari Perangkat'
+                    : 'Pilih Foto dari Perangkat',
+                style: const TextStyle(fontSize: 12),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.maroon,
+                side: const BorderSide(color: AppColors.maroon),
+                backgroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 11),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,151 +1,162 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+
+import '../models/pkl_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
-
-class AttendanceRecordItem {
-  const AttendanceRecordItem({
-    required this.shortWeekday,
-    required this.shortDate,
-    this.checkInTime,
-    this.checkOutTime,
-    this.checkInPhoto,
-    this.checkOutPhoto,
-    this.isApprovedByIduka = false,
-    this.idukaApproverName,
-    this.idukaApprovalTime,
-  });
-
-  final String shortWeekday;
-  final String shortDate;
-  final String? checkInTime;
-  final String? checkOutTime;
-  final String? checkInPhoto;
-  final String? checkOutPhoto;
-  final bool isApprovedByIduka;
-  final String? idukaApproverName;
-  final String? idukaApprovalTime;
-
-  String get approvalStatusLabel =>
-      isApprovedByIduka ? 'Disetujui Pembimbing IDUKA' : 'Menunggu Konfirmasi IDUKA';
-}
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({
     super.key,
+    this.student,
     this.idukaMentorName = 'Hendro Prasetyo, S.T.',
-    this.hasCheckedIn,
-    this.hasCheckedOut,
-    this.checkInTime,
-    this.checkOutTime,
-    this.onAttendanceAction,
+    this.schedule,
+    this.records,
+    this.onCheckIn,
+    this.onCheckOut,
+    this.notifications,
+    this.unreadNotificationCount = 2,
+    this.onNotificationsOpened,
   });
 
-  final bool? hasCheckedIn;
-  final bool? hasCheckedOut;
-  final String? checkInTime;
-  final String? checkOutTime;
-  final VoidCallback? onAttendanceAction;
+  final PklUser? student;
   final String idukaMentorName;
+  final InternshipSchedule? schedule;
+  final List<PklAttendanceRecord>? records;
+  final ValueChanged<Uint8List>? onCheckIn;
+  final ValueChanged<Uint8List>? onCheckOut;
+  final List<PklNotificationItem>? notifications;
+  final int unreadNotificationCount;
+  final VoidCallback? onNotificationsOpened;
 
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
 }
 
 class _AttendanceScreenState extends State<AttendanceScreen> {
-  final String _currentPhotoUrl = PklPhotoPresets.coding;
+  Uint8List? _selectedPhotoBytes;
+  String? _selectedPhotoName;
 
-  late bool _hasCheckedIn;
-  late bool _hasCheckedOut;
-  late String? _checkInTime;
-  late String? _checkOutTime;
-
-  late final List<AttendanceRecordItem> _records = [
-    AttendanceRecordItem(
-      shortWeekday: 'Senin',
-      shortDate: '24 Nov 2026',
-      checkInTime: '07.50',
-      checkOutTime: '16.05',
-      checkInPhoto: PklPhotoPresets.coding,
-      checkOutPhoto: PklPhotoPresets.report,
-      isApprovedByIduka: true,
-      idukaApproverName: widget.idukaMentorName,
-      idukaApprovalTime: '16.15 WIB',
-    ),
-    AttendanceRecordItem(
-      shortWeekday: 'Selasa',
-      shortDate: '25 Nov 2026',
-      checkInTime: '07.45',
-      checkOutTime: '16.10',
-      checkInPhoto: PklPhotoPresets.meeting,
-      checkOutPhoto: PklPhotoPresets.report,
-      isApprovedByIduka: true,
-      idukaApproverName: widget.idukaMentorName,
-      idukaApprovalTime: '16.20 WIB',
-    ),
-    AttendanceRecordItem(
-      shortWeekday: 'Rabu',
-      shortDate: '26 Nov 2026',
-      checkInTime: '07.55',
-      checkOutTime: '16.00',
-      checkInPhoto: PklPhotoPresets.networking,
-      checkOutPhoto: PklPhotoPresets.report,
-      isApprovedByIduka: true,
-      idukaApproverName: widget.idukaMentorName,
-      idukaApprovalTime: '16.10 WIB',
-    ),
-    AttendanceRecordItem(
-      shortWeekday: 'Kamis',
-      shortDate: '27 Nov 2026',
-      checkInTime: '07.40',
-      checkOutTime: '16.15',
-      checkInPhoto: PklPhotoPresets.uiDesign,
-      checkOutPhoto: PklPhotoPresets.report,
-      isApprovedByIduka: false,
-    ),
-  ];
+  late List<PklAttendanceRecord> _localRecords;
 
   @override
   void initState() {
     super.initState();
-    _hasCheckedIn = widget.hasCheckedIn ?? true;
-    _hasCheckedOut = widget.hasCheckedOut ?? false;
-    _checkInTime = widget.checkInTime ?? '07.45';
-    _checkOutTime = widget.checkOutTime;
+    _localRecords = widget.records != null
+        ? List.from(widget.records!)
+        : [
+            PklAttendanceRecord(
+              id: 'att-demo-1',
+              studentAccountId: widget.student?.accountId ?? '0054321980',
+              studentName: widget.student?.name ?? 'Ahmad Fauzi',
+              date: DateTime(2026, 11, 26),
+              checkInTime: '07.50',
+              checkOutTime: '16.05',
+              checkInPhoto: PklPhotoPresets.coding,
+              checkOutPhoto: PklPhotoPresets.report,
+              isApprovedByIduka: true,
+              idukaApproverName: widget.idukaMentorName,
+              idukaApprovalTime: '16.15 WIB',
+            ),
+            PklAttendanceRecord(
+              id: 'att-demo-2',
+              studentAccountId: widget.student?.accountId ?? '0054321980',
+              studentName: widget.student?.name ?? 'Ahmad Fauzi',
+              date: DateTime(2026, 11, 25),
+              checkInTime: '07.45',
+              checkOutTime: '16.10',
+              checkInPhoto: PklPhotoPresets.meeting,
+              checkOutPhoto: PklPhotoPresets.report,
+              isApprovedByIduka: true,
+              idukaApproverName: widget.idukaMentorName,
+              idukaApprovalTime: '16.20 WIB',
+            ),
+          ];
   }
 
-  void _recordAttendance() {
-    if (_hasCheckedIn && _hasCheckedOut) return;
+  @override
+  void didUpdateWidget(covariant AttendanceScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.records != null && widget.records != oldWidget.records) {
+      _localRecords = List.from(widget.records!);
+    }
+  }
 
-    final isCheckIn = !_hasCheckedIn;
+  PklAttendanceRecord? get _todayRecord {
+    final now = DateTime.now();
+    for (final r in _localRecords) {
+      if (r.date.year == now.year &&
+          r.date.month == now.month &&
+          r.date.day == now.day) {
+        return r;
+      }
+    }
+    return null;
+  }
+
+  void _submitAttendance(bool isCheckIn) {
+    final bytes = _selectedPhotoBytes;
+    if (bytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isCheckIn
+                ? 'Pilih foto dari perangkat terlebih dahulu untuk presensi masuk.'
+                : 'Pilih foto dari perangkat terlebih dahulu untuk presensi pulang.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final now = DateTime.now();
     final timeStr =
         '${now.hour.toString().padLeft(2, '0')}.${now.minute.toString().padLeft(2, '0')}';
 
-    setState(() {
-      if (!_hasCheckedIn) {
-        _hasCheckedIn = true;
-        _checkInTime = timeStr;
-      } else if (!_hasCheckedOut) {
-        _hasCheckedOut = true;
-        _checkOutTime = timeStr;
-        _records.insert(
-          0,
-          AttendanceRecordItem(
-            shortWeekday: 'Hari Ini',
-            shortDate: '${now.day} Nov ${now.year}',
-            checkInTime: _checkInTime,
-            checkOutTime: _checkOutTime,
-            checkInPhoto: _currentPhotoUrl,
-            checkOutPhoto: PklPhotoPresets.report,
-            isApprovedByIduka: false,
-          ),
-        );
+    if (isCheckIn) {
+      if (widget.onCheckIn != null) {
+        widget.onCheckIn!(bytes);
+      } else {
+        setState(() {
+          _localRecords.insert(
+            0,
+            PklAttendanceRecord(
+              id: 'att-${now.microsecondsSinceEpoch}',
+              studentAccountId: widget.student?.accountId ?? '0054321980',
+              studentName: widget.student?.name ?? 'Ahmad Fauzi',
+              date: DateTime(now.year, now.month, now.day),
+              checkInTime: timeStr,
+              checkInPhotoBytes: bytes,
+            ),
+          );
+        });
       }
-    });
-
-    if (widget.onAttendanceAction != null) {
-      widget.onAttendanceAction!();
+    } else {
+      if (widget.onCheckOut != null) {
+        widget.onCheckOut!(bytes);
+      } else {
+        setState(() {
+          final idx = _localRecords.indexWhere(
+            (r) =>
+                r.date.year == now.year &&
+                r.date.month == now.month &&
+                r.date.day == now.day,
+          );
+          if (idx != -1) {
+            _localRecords[idx] = _localRecords[idx].copyWith(
+              checkOutTime: timeStr,
+              checkOutPhotoBytes: bytes,
+            );
+          }
+        });
+      }
     }
+
+    setState(() {
+      _selectedPhotoBytes = null;
+      _selectedPhotoName = null;
+    });
 
     showModalBottomSheet<void>(
       context: context,
@@ -197,50 +208,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Kehadiranmu tercatat dan menunggu konfirmasi dari Pembimbing IDUKA (${widget.idukaMentorName}).',
+                'Kehadiranmu tercatat pukul $timeStr WIB dan menunggu validasi dari Mentor IDUKA (${widget.idukaMentorName}).',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.muted, fontSize: 12, height: 1.5),
-              ),
-              const SizedBox(height: 18),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.paper,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.line),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.access_time_rounded,
-                            size: 16, color: AppColors.maroon),
-                        const SizedBox(width: 8),
-                        const Text('Waktu Tercatat:',
-                            style: TextStyle(fontSize: 12, color: AppColors.muted)),
-                        const Spacer(),
-                        Text('${currentTimeLabel()} WIB',
-                            style: const TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.w800)),
-                      ],
-                    ),
-                    const Divider(height: 16),
-                    Row(
-                      children: [
-                        const Icon(Icons.business_rounded,
-                            size: 16, color: AppColors.green),
-                        const SizedBox(width: 8),
-                        const Text('Konfirmasi Oleh:',
-                            style: TextStyle(fontSize: 12, color: AppColors.muted)),
-                        const Spacer(),
-                        Text('Pembimbing IDUKA',
-                            style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.green)),
-                      ],
-                    ),
-                  ],
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 12,
+                  height: 1.5,
                 ),
               ),
               const SizedBox(height: 20),
@@ -255,7 +228,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  void _showAttendanceDetail(AttendanceRecordItem record) {
+  void _showAttendanceDetail(PklAttendanceRecord record) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -299,11 +272,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 Text(
                   '${record.shortWeekday}, ${record.shortDate}',
                   style: const TextStyle(
-                      color: AppColors.muted, fontSize: 12, fontWeight: FontWeight.w600),
+                    color: AppColors.muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 18),
-
-                // Approval Status Card (Only IDUKA confirms)
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -313,8 +287,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: record.isApprovedByIduka
-                          ? AppColors.green.withOpacity(0.3)
-                          : AppColors.amber.withOpacity(0.3),
+                          ? AppColors.green.withValues(alpha: 0.3)
+                          : AppColors.amber.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -323,11 +297,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         radius: 18,
                         backgroundColor: record.isApprovedByIduka
                             ? AppColors.green
-                            : AppColors.amber,
+                            : record.isRejectedByIduka
+                                ? AppColors.maroon
+                                : AppColors.amber,
                         child: Icon(
                           record.isApprovedByIduka
                               ? Icons.check_circle_rounded
-                              : Icons.hourglass_top_rounded,
+                              : record.isRejectedByIduka
+                                  ? Icons.cancel_rounded
+                                  : Icons.hourglass_top_rounded,
                           color: Colors.white,
                           size: 18,
                         ),
@@ -338,21 +316,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              record.isApprovedByIduka
-                                  ? 'Disetujui Pembimbing IDUKA'
-                                  : 'Menunggu Konfirmasi IDUKA',
+                              record.approvalStatusLabel,
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
                                 color: record.isApprovedByIduka
                                     ? AppColors.green
-                                    : AppColors.amber,
+                                    : record.isRejectedByIduka
+                                        ? AppColors.maroon
+                                        : AppColors.amber,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              record.isApprovedByIduka
-                                  ? 'Dikonfirmasi oleh ${record.idukaApproverName ?? widget.idukaMentorName} • ${record.idukaApprovalTime ?? '16.15 WIB'}'
+                              (record.isApprovedByIduka ||
+                                      record.isRejectedByIduka)
+                                  ? 'Oleh ${record.idukaApproverName ?? widget.idukaMentorName} • ${record.idukaApprovalTime ?? '-'}'
                                   : 'Pembimbing industri: ${widget.idukaMentorName}',
                               style: const TextStyle(
                                 fontSize: 11,
@@ -366,8 +345,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   ),
                 ),
                 const SizedBox(height: 18),
-
-                // Waktu & Foto Masuk
                 const Text(
                   'PRESENSI MASUK',
                   style: TextStyle(
@@ -394,7 +371,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               size: 16, color: AppColors.green),
                           const SizedBox(width: 6),
                           const Text('Waktu Masuk: ',
-                              style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                              style: TextStyle(
+                                  fontSize: 12, color: AppColors.muted)),
                           Text(
                             record.checkInTime != null
                                 ? '${record.checkInTime} WIB'
@@ -404,10 +382,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           ),
                         ],
                       ),
-                      if (record.checkInPhoto != null || record.checkInTime != null) ...[
+                      if (record.checkInPhotoBytes != null ||
+                          record.checkInPhoto != null) ...[
                         const SizedBox(height: 10),
                         PklPhotoThumbnail(
-                          imageUrl: record.checkInPhoto ?? _currentPhotoUrl,
+                          imageBytes: record.checkInPhotoBytes,
+                          imageUrl: record.checkInPhoto,
                           height: 130,
                           caption: 'Foto Bukti Presensi Masuk',
                         ),
@@ -416,8 +396,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Waktu & Foto Pulang
                 const Text(
                   'PRESENSI PULANG',
                   style: TextStyle(
@@ -444,7 +422,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               size: 16, color: AppColors.maroon),
                           const SizedBox(width: 6),
                           const Text('Waktu Pulang: ',
-                              style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                              style: TextStyle(
+                                  fontSize: 12, color: AppColors.muted)),
                           Text(
                             record.checkOutTime != null
                                 ? '${record.checkOutTime} WIB'
@@ -454,10 +433,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           ),
                         ],
                       ),
-                      if (record.checkOutTime != null) ...[
+                      if (record.checkOutPhotoBytes != null ||
+                          record.checkOutPhoto != null) ...[
                         const SizedBox(height: 10),
                         PklPhotoThumbnail(
-                          imageUrl: record.checkOutPhoto ?? PklPhotoPresets.report,
+                          imageBytes: record.checkOutPhotoBytes,
+                          imageUrl: record.checkOutPhoto,
                           height: 130,
                           caption: 'Foto Bukti Presensi Pulang',
                         ),
@@ -480,15 +461,29 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isComplete = _hasCheckedIn && _hasCheckedOut;
+    final today = _todayRecord;
+    final hasCheckedIn = today?.checkInTime != null;
+    final hasCheckedOut = today?.checkOutTime != null;
+    final isComplete = hasCheckedIn && hasCheckedOut;
+
+    final activeSchedule = widget.schedule ??
+        InternshipSchedule(
+          startDate: DateTime(2026, 7, 1),
+          endDate: DateTime(2026, 12, 31),
+          durationMonths: 6,
+        );
+    final now = DateTime.now();
+    final isWeekend =
+        now.weekday == DateTime.saturday || now.weekday == DateTime.sunday;
+
     final statusLabel = isComplete
         ? 'Presensi Lengkap'
-        : _hasCheckedIn
-            ? 'Sedang Praktik'
+        : hasCheckedIn
+            ? 'Sudah Masuk'
             : 'Belum Presensi';
     final statusColor = isComplete
         ? AppColors.green
-        : _hasCheckedIn
+        : hasCheckedIn
             ? AppColors.amber
             : AppColors.maroon;
 
@@ -498,7 +493,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         children: [
           PageHeading(
             title: 'Presensi PKL',
-            subtitle: 'Upload foto kehadiran untuk konfirmasi Pembimbing IDUKA.',
+            subtitle: 'Upload foto dari perangkat untuk masuk & pulang.',
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -506,7 +501,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   label: statusLabel,
                   color: isComplete
                       ? AppColors.paleGreen
-                      : _hasCheckedIn
+                      : hasCheckedIn
                           ? AppColors.paleAmber
                           : AppColors.cream,
                   textColor: statusColor,
@@ -515,7 +510,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       : Icons.schedule_rounded,
                 ),
                 const SizedBox(width: 6),
-                const PklNotificationButton(unreadCount: 2),
+                PklNotificationButton(
+                  unreadCount: widget.unreadNotificationCount,
+                  notifications: widget.notifications,
+                  onOpened: widget.onNotificationsOpened,
+                ),
               ],
             ),
           ),
@@ -540,15 +539,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     Text(
                       currentDateLabel().toUpperCase(),
                       style: TextStyle(
-                        color: AppColors.cream.withOpacity(0.85),
+                        color: AppColors.cream.withValues(alpha: 0.85),
                         fontSize: 10,
                         letterSpacing: 1.2,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const InfoPill(
-                      label: 'PKL AKTIF',
-                      color: Color(0x33FFFFFF),
+                    InfoPill(
+                      label: isWeekend ? 'SABTU/MINGGU LIBUR' : 'PKL 6 BULAN',
+                      color: const Color(0x33FFFFFF),
                       textColor: Colors.white,
                     ),
                   ],
@@ -557,10 +556,50 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 const LiveClockWidget(isLight: true),
                 const SizedBox(height: 6),
                 Text(
-                  'Jam Kerja Industri: 08.00 – 16.00 WIB',
+                  'Hari Kerja: Senin–Jumat (${activeSchedule.totalWorkingDays} hari kerja / 6 bulan) • Sabtu & Minggu Libur',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.75),
+                    color: Colors.white.withValues(alpha: 0.82),
                     fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Durasi PKL Summary Card
+          WhiteCard(
+            padding: 14,
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AppColors.cream,
+                  child: Icon(Icons.date_range_rounded,
+                      color: AppColors.maroon, size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Periode ${activeSchedule.durationMonths} Bulan (${activeSchedule.periodLabel})',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Berjalan ${activeSchedule.elapsedWorkingDays()} hari • Sisa ${activeSchedule.remainingWorkingDays()} hari kerja',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -568,317 +607,189 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
           const SizedBox(height: 18),
 
-          // Konfirmasi IDUKA Notice
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.paleGreen,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.green.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.verified_user_rounded,
-                    color: AppColors.green, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Presensi dikonfirmasi dan disetujui langsung oleh Pembimbing IDUKA (${widget.idukaMentorName}). Guru sekolah tidak perlu mengonfirmasi presensi.',
-                    style: const TextStyle(
-                      color: AppColors.green,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      height: 1.45,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          // Presensi Masuk / Pulang with Device Photo Picker
+          SectionLabel(
+            !hasCheckedIn
+                ? 'Presensi Masuk Hari Ini'
+                : !hasCheckedOut
+                    ? 'Presensi Pulang Hari Ini'
+                    : 'Presensi Hari Ini Selesai',
           ),
-          const SizedBox(height: 20),
-
-          // Upload Foto & Catat Kehadiran (Tanpa Ganti Foto)
-          const SectionLabel('Foto Kehadiran Hari Ini'),
           WhiteCard(
             padding: 16,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Stack(
-                    children: [
-                      Image.network(
-                        _currentPhotoUrl,
-                        height: 170,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          height: 170,
-                          color: AppColors.cream,
-                          child: const Center(
-                            child: Icon(Icons.camera_alt,
-                                size: 48, color: AppColors.maroon),
+                if (hasCheckedIn) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.paleGreen,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.login_rounded,
+                            color: AppColors.green, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Presensi masuk tercatat pukul ${today!.checkInTime} WIB',
+                            style: const TextStyle(
+                              color: AppColors.green,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                      ),
-                      Positioned(
-                        left: 10,
-                        bottom: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.68),
-                            borderRadius: BorderRadius.circular(8),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (hasCheckedOut) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.paleGreen,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.logout_rounded,
+                            color: AppColors.green, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Presensi pulang tercatat pukul ${today!.checkOutTime} WIB',
+                            style: const TextStyle(
+                              color: AppColors.green,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.access_time_rounded,
-                                  size: 12, color: Colors.white),
-                              const SizedBox(width: 5),
-                              Text(
-                                'Foto kehadiran ${currentTimeLabel()} WIB',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-
-                // Time Blocks
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.paper,
-                    borderRadius: BorderRadius.circular(16),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => _showAttendanceDetail(today),
+                    icon: const Icon(Icons.visibility_outlined),
+                    label: const Text('Lihat Foto Masuk & Pulang Hari Ini'),
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _TimeBlock(
-                          label: 'JAM MASUK',
-                          time: _checkInTime ?? '--.--',
-                          complete: _hasCheckedIn,
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 40,
-                        color: AppColors.line,
-                        margin: const EdgeInsets.symmetric(horizontal: 14),
-                      ),
-                      Expanded(
-                        child: _TimeBlock(
-                          label: 'JAM PULANG',
-                          time: _checkOutTime ?? '--.--',
-                          complete: _hasCheckedOut,
-                        ),
-                      ),
-                    ],
+                ] else ...[
+                  DevicePhotoPickerBox(
+                    selectedBytes: _selectedPhotoBytes,
+                    selectedFileName: _selectedPhotoName,
+                    title: !hasCheckedIn
+                        ? 'Upload Foto Presensi Masuk'
+                        : 'Upload Foto Presensi Pulang',
+                    subtitle: 'Pilih foto dari perangkat pengguna.',
+                    onPhotoSelected: (bytes, name) {
+                      setState(() {
+                        _selectedPhotoBytes = bytes;
+                        _selectedPhotoName = name;
+                      });
+                    },
                   ),
-                ),
-                const SizedBox(height: 16),
-
-                ElevatedButton.icon(
-                  onPressed: isComplete ? null : _recordAttendance,
-                  icon: Icon(
-                    isComplete
-                        ? Icons.check_circle_rounded
-                        : _hasCheckedIn
-                            ? Icons.logout_rounded
-                            : Icons.camera_alt_rounded,
+                  const SizedBox(height: 14),
+                  ElevatedButton.icon(
+                    onPressed: () => _submitAttendance(!hasCheckedIn),
+                    icon: Icon(
+                      !hasCheckedIn
+                          ? Icons.login_rounded
+                          : Icons.logout_rounded,
+                    ),
+                    label: Text(
+                      !hasCheckedIn
+                          ? 'Kirim Presensi Masuk'
+                          : 'Kirim Presensi Pulang',
+                    ),
                   ),
-                  label: Text(
-                    isComplete
-                        ? 'Presensi Hari Ini Selesai'
-                        : _hasCheckedIn
-                            ? 'Upload Foto & Catat Pulang'
-                            : 'Upload Foto & Catat Masuk',
-                  ),
-                  style: isComplete
-                      ? ElevatedButton.styleFrom(
-                          disabledBackgroundColor: AppColors.paleGreen,
-                          disabledForegroundColor: AppColors.green,
-                        )
-                      : null,
-                ),
+                ],
               ],
             ),
           ),
           const SizedBox(height: 22),
 
-          // Riwayat Presensi (Clickable tiles)
           SectionLabel(
-            'Riwayat Kehadiran (Klik untuk Detail)',
-            action: '${_records.length} hari',
+            'Riwayat Presensi',
+            action: '${_localRecords.length} catatan',
           ),
-          WhiteCard(
-            padding: _records.isEmpty ? 16 : 0,
-            child: _records.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Center(
-                      child: Text(
-                        'Belum ada riwayat presensi.',
-                        style: TextStyle(color: AppColors.muted),
+          ..._localRecords.map(
+            (record) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: WhiteCard(
+                padding: 14,
+                onTap: () => _showAttendanceDetail(record),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: record.isApprovedByIduka
+                          ? AppColors.paleGreen
+                          : record.isRejectedByIduka
+                              ? AppColors.cream
+                              : AppColors.paleAmber,
+                      child: Icon(
+                        record.isApprovedByIduka
+                            ? Icons.verified_rounded
+                            : record.isRejectedByIduka
+                                ? Icons.cancel_rounded
+                                : Icons.hourglass_top_rounded,
+                        color: record.isApprovedByIduka
+                            ? AppColors.green
+                            : record.isRejectedByIduka
+                                ? AppColors.maroon
+                                : AppColors.amber,
+                        size: 20,
                       ),
                     ),
-                  )
-                : Column(
-                    children: [
-                      for (var index = 0;
-                          index < _records.length && index < 7;
-                          index++) ...[
-                        if (index > 0)
-                          const Divider(height: 1, indent: 16, endIndent: 16),
-                        InkWell(
-                          onTap: () => _showAttendanceDetail(_records[index]),
-                          borderRadius: BorderRadius.circular(16),
-                          child: _AttendanceHistoryRow(record: _records[index]),
-                        ),
-                      ],
-                    ],
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TimeBlock extends StatelessWidget {
-  const _TimeBlock({
-    required this.label,
-    required this.time,
-    required this.complete,
-  });
-
-  final String label;
-  final String time;
-  final bool complete;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.muted,
-            fontSize: 9,
-            letterSpacing: 0.8,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Text(
-              time,
-              style: TextStyle(
-                color: complete ? AppColors.ink : AppColors.muted,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            if (complete) ...[
-              const SizedBox(width: 5),
-              const Icon(
-                Icons.check_circle_rounded,
-                color: AppColors.green,
-                size: 15,
-              ),
-            ],
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _AttendanceHistoryRow extends StatelessWidget {
-  const _AttendanceHistoryRow({required this.record});
-
-  final AttendanceRecordItem record;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 48,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  record.shortWeekday.toUpperCase(),
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  record.shortDate,
-                  style: const TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Masuk: ${record.checkInTime ?? '--.--'}',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${record.shortWeekday}, ${record.shortDate}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Masuk: ${record.checkInTime ?? '-'} • Pulang: ${record.checkOutTime ?? '-'}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.muted,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          InfoPill(
+                            label: record.approvalStatusLabel,
+                            color: record.isApprovedByIduka
+                                ? AppColors.paleGreen
+                                : record.isRejectedByIduka
+                                    ? AppColors.cream
+                                    : AppColors.paleAmber,
+                            textColor: record.isApprovedByIduka
+                                ? AppColors.green
+                                : record.isRejectedByIduka
+                                    ? AppColors.maroon
+                                    : AppColors.amber,
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Pulang: ${record.checkOutTime ?? '--.--'}',
-                      style: const TextStyle(fontSize: 11, color: AppColors.muted),
-                    ),
+                    const Icon(Icons.chevron_right_rounded,
+                        color: AppColors.muted),
                   ],
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  record.approvalStatusLabel,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: record.isApprovedByIduka
-                        ? AppColors.green
-                        : AppColors.amber,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.muted,
-            size: 19,
           ),
         ],
       ),

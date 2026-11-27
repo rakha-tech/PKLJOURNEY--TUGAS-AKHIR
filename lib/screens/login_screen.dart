@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../models/pkl_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
-import 'admin_accounts_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -169,19 +169,30 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 20),
 
-                              // Quick Fill Demo Accounts (Admin, Murid, Guru, Mentor/IDUKA)
+                              // Quick Fill Demo Accounts (1 chip per role: Admin, Murid, Guru, Mentor/IDUKA)
                               const _FieldLabel('PILIH AKUN DEMO'),
                               const SizedBox(height: 8),
                               Wrap(
                                 spacing: 6,
                                 runSpacing: 6,
-                                children: widget.users.map((user) {
-                                  final roleLabel = user.role == UserRole.iduka
+                                children: [
+                                  UserRole.admin,
+                                  UserRole.murid,
+                                  UserRole.guru,
+                                  UserRole.iduka,
+                                ].map((role) {
+                                  final user = widget.users
+                                      .where((u) => u.role == role)
+                                      .firstOrNull;
+                                  if (user == null) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  final roleLabel = role == UserRole.iduka
                                       ? 'Mentor'
-                                      : user.role.label;
+                                      : role.label;
                                   return ActionChip(
                                     avatar: Icon(
-                                      switch (user.role) {
+                                      switch (role) {
                                         UserRole.admin =>
                                           Icons.admin_panel_settings_rounded,
                                         UserRole.murid => Icons.school_rounded,

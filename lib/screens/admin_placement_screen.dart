@@ -1,76 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../models/pkl_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
-
-// Model pendukung & Data Dummy lokal
-enum UserRole {
-  admin,
-  guru,
-  iduka,
-  murid;
-
-  String get label => switch (this) {
-        UserRole.admin => 'Admin',
-        UserRole.guru => 'Guru',
-        UserRole.iduka => 'IDUKA',
-        UserRole.murid => 'Murid',
-      };
-
-  String get accountIdLabel => switch (this) {
-        UserRole.admin => 'ID Admin',
-        UserRole.guru => 'NIP',
-        UserRole.iduka => 'ID IDUKA',
-        UserRole.murid => 'NISN',
-      };
-}
-
-class PklUser {
-  const PklUser({
-    required this.accountId,
-    required this.name,
-    required this.role,
-    this.username = '',
-    this.mentorAccountId,
-    this.companyName,
-    this.address,
-    this.phoneNumber,
-  });
-
-  final String accountId;
-  final String name;
-  final UserRole role;
-  final String username;
-  final String? mentorAccountId;
-  final String? companyName;
-  final String? address;
-  final String? phoneNumber;
-
-  PklUser copyWith({
-    String? accountId,
-    String? name,
-    UserRole? role,
-    String? username,
-    String? mentorAccountId,
-    bool clearMentorAccountId = false,
-    String? companyName,
-    String? address,
-    String? phoneNumber,
-  }) {
-    return PklUser(
-      accountId: accountId ?? this.accountId,
-      name: name ?? this.name,
-      role: role ?? this.role,
-      username: username ?? this.username,
-      mentorAccountId: clearMentorAccountId
-          ? null
-          : (mentorAccountId ?? this.mentorAccountId),
-      companyName: companyName ?? this.companyName,
-      address: address ?? this.address,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
-    );
-  }
-}
 
 enum _MentorshipFilter { all, unassigned, assigned, byTeacher }
 
@@ -80,56 +12,66 @@ class AdminPlacementScreen extends StatefulWidget {
     this.users = const [
       PklUser(
         accountId: 'ADM001',
+        username: 'admin',
         name: 'Administrator PKL',
         role: UserRole.admin,
       ),
       PklUser(
         accountId: '19820109940201',
+        username: 'budisantoso',
         name: 'Budi Santoso, M.Pd.',
         role: UserRole.guru,
       ),
       PklUser(
         accountId: '19790512200312',
+        username: 'sitinurbaya',
         name: 'Siti Nurbaya, S.Pd.',
         role: UserRole.guru,
       ),
       PklUser(
         accountId: '19850315201001',
+        username: 'drsbambang',
         name: 'Drs. Bambang Haryono',
         role: UserRole.guru,
       ),
       PklUser(
         accountId: '0054321980',
+        username: 'ahmadfauzi',
         name: 'Ahmad Fauzi',
         role: UserRole.murid,
         mentorAccountId: '19820109940201',
       ),
       PklUser(
         accountId: '0054321981',
+        username: 'sitinurhaliza',
         name: 'Siti Nurhaliza',
         role: UserRole.murid,
         mentorAccountId: '19820109940201',
       ),
       PklUser(
         accountId: '0054321982',
+        username: 'dimasanggara',
         name: 'Dimas Anggara',
         role: UserRole.murid,
         mentorAccountId: '19790512200312',
       ),
       PklUser(
         accountId: '0054321983',
+        username: 'rizkypratama',
         name: 'Rizky Pratama',
         role: UserRole.murid,
         mentorAccountId: null,
       ),
       PklUser(
         accountId: '0054321984',
+        username: 'nabilaazzahra',
         name: 'Nabila Azzahra',
         role: UserRole.murid,
         mentorAccountId: null,
       ),
       PklUser(
         accountId: '0054321985',
+        username: 'kevinsanjaya',
         name: 'Kevin Sanjaya',
         role: UserRole.murid,
         mentorAccountId: null,
