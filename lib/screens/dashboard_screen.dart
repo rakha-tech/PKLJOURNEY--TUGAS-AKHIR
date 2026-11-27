@@ -47,6 +47,11 @@ class DashboardScreen extends StatelessWidget {
           'Gedung Menara Sudirman Lt. 12, Jl. Jend. Sudirman Kav. 28, Jakarta Pusat',
     ),
     this.idukaMentorName = 'Hendro Prasetyo, S.T.',
+    this.idukaMentorPhone = '081398765432',
+    this.idukaMentorEmail = 'hendro.prasetyo@aksara.id',
+    this.teacherMentorName = 'Budi Santoso, M.Pd.',
+    this.teacherMentorPhone = '081234567891',
+    this.teacherMentorEmail = 'budisantoso@guru.smkn1jakarta.sch.id',
     this.latestJournal = const JournalEntry(
       title: 'Implementasi Slicing UI Dashboard & Integrasi Tema',
       description:
@@ -69,6 +74,11 @@ class DashboardScreen extends StatelessWidget {
   final int journalCount;
   final InternshipLocation? workplaceLocation;
   final String idukaMentorName;
+  final String idukaMentorPhone;
+  final String idukaMentorEmail;
+  final String teacherMentorName;
+  final String teacherMentorPhone;
+  final String teacherMentorEmail;
   final JournalEntry? latestJournal;
   final VoidCallback? onOpenAttendance;
   final VoidCallback? onOpenJournal;
@@ -80,6 +90,120 @@ class DashboardScreen extends StatelessWidget {
     if (hour < 15) return 'Selamat Siang';
     if (hour < 18) return 'Selamat Sore';
     return 'Selamat Malam';
+  }
+
+  void _showContactOptions(
+    BuildContext context, {
+    required String name,
+    required String roleTitle,
+    required String phone,
+    required String email,
+  }) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.line,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 20,
+                    backgroundColor: AppColors.paleGreen,
+                    child: Icon(Icons.support_agent_rounded, color: AppColors.green),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          roleTitle,
+                          style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                tileColor: AppColors.paper,
+                leading: const CircleAvatar(
+                  backgroundColor: AppColors.green,
+                  radius: 18,
+                  child: Icon(Icons.chat_rounded, color: Colors.white, size: 18),
+                ),
+                title: const Text('WhatsApp / Chat', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                subtitle: Text(phone, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.muted),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Menghubungkan ke WhatsApp: $phone'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                tileColor: AppColors.paper,
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFF2E6B8B),
+                  radius: 18,
+                  child: Icon(Icons.mail_rounded, color: Colors.white, size: 18),
+                ),
+                title: const Text('Kirim Email', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                subtitle: Text(email, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.muted),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Membuka email ke: $email'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -401,13 +525,98 @@ class DashboardScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 5),
-                      Text(
-                        'Pembimbing IDUKA: $idukaMentorName',
-                        style: const TextStyle(
-                          color: AppColors.maroon,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Pembimbing IDUKA: $idukaMentorName',
+                              style: const TextStyle(
+                                color: AppColors.maroon,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => _showContactOptions(
+                              context,
+                              name: idukaMentorName,
+                              roleTitle: 'Pembimbing IDUKA (Industri)',
+                              phone: idukaMentorPhone,
+                              email: idukaMentorEmail,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.cream,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.chat_bubble_outline_rounded, size: 12, color: AppColors.maroon),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Hubungi IDUKA',
+                                    style: TextStyle(
+                                      color: AppColors.maroon,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Guru Pembimbing: $teacherMentorName',
+                              style: const TextStyle(
+                                color: AppColors.green,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => _showContactOptions(
+                              context,
+                              name: teacherMentorName,
+                              roleTitle: 'Guru Pembimbing Sekolah',
+                              phone: teacherMentorPhone,
+                              email: teacherMentorEmail,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.paleGreen,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.chat_bubble_outline_rounded, size: 12, color: AppColors.green),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Hubungi Guru',
+                                    style: TextStyle(
+                                      color: AppColors.green,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
