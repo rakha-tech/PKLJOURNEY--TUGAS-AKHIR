@@ -11,6 +11,7 @@ class JournalEntry {
     required this.date,
     required this.time,
     required this.tag,
+    this.imageUrl,
   });
 
   final String id;
@@ -19,6 +20,7 @@ class JournalEntry {
   final String date;
   final String time;
   final String tag;
+  final String? imageUrl;
 }
 
 class JournalScreen extends StatefulWidget {
@@ -33,6 +35,7 @@ class JournalScreen extends StatefulWidget {
         date: '26 November 2026',
         time: '08.15',
         tag: 'Orientasi',
+        imageUrl: PklPhotoPresets.meeting,
       ),
       JournalEntry(
         id: 'journal-002',
@@ -41,6 +44,7 @@ class JournalScreen extends StatefulWidget {
         date: '25 November 2026',
         time: '13.40',
         tag: 'Proyek',
+        imageUrl: PklPhotoPresets.uiDesign,
       ),
       JournalEntry(
         id: 'journal-003',
@@ -49,6 +53,7 @@ class JournalScreen extends StatefulWidget {
         date: '24 November 2026',
         time: '10.05',
         tag: 'Pembelajaran',
+        imageUrl: PklPhotoPresets.coding,
       ),
     ],
     required this.onAddEntry,
@@ -213,6 +218,14 @@ class _JournalCard extends StatelessWidget {
           Text(entry.title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 6),
           Text(entry.description),
+          if (entry.imageUrl != null) ...[
+            const SizedBox(height: 12),
+            PklPhotoThumbnail(
+              imageUrl: entry.imageUrl!,
+              height: 140,
+              caption: 'Foto Dokumentasi Kegiatan: ${entry.title}',
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             children: [
@@ -246,6 +259,8 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _tag = 'Kegiatan';
+  String? _selectedPhotoUrl;
+  bool _photoError = false;
 
   @override
   void dispose() {
@@ -254,8 +269,110 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
     super.dispose();
   }
 
+  void _choosePhoto() {
+    showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (pickerContext) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 26),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.line,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Upload Bukti Foto Kegiatan',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Ambil foto langsung atau unggah dari galeri untuk melengkapi jurnal:',
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(pickerContext, PklPhotoPresets.coding);
+                      },
+                      icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                      label: const Text('Buka Kamera'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(pickerContext, PklPhotoPresets.uiDesign);
+                      },
+                      icon: const Icon(Icons.photo_library_rounded, size: 18),
+                      label: const Text('Pilih Galeri'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: AppColors.line),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).then((chosen) {
+      if (chosen != null) {
+        setState(() {
+          _selectedPhotoUrl = chosen;
+          _photoError = false;
+        });
+      }
+    });
+  }
+
   void _save() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final isFormValid = _formKey.currentState?.validate() ?? false;
+    if (_selectedPhotoUrl == null) {
+      setState(() {
+        _photoError = true;
+      });
+    }
+
+    if (!isFormValid || _selectedPhotoUrl == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Wajib melampirkan foto dokumentasi kegiatan!'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.maroon,
+        ),
+      );
+      return;
+    }
+
     final now = DateTime.now();
     final entry = JournalEntry(
       id: now.microsecondsSinceEpoch.toString(),
@@ -265,6 +382,7 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
       time:
           '${now.hour.toString().padLeft(2, '0')}.${now.minute.toString().padLeft(2, '0')}',
       tag: _tag,
+      imageUrl: _selectedPhotoUrl,
     );
     Navigator.of(context).pop(entry);
   }
@@ -357,6 +475,104 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
                   onChanged: (value) =>
                       setState(() => _tag = value ?? 'Kegiatan'),
                 ),
+                const SizedBox(height: 15),
+                const _FormLabel('FOTO DOKUMENTASI KEGIATAN *'),
+                const SizedBox(height: 7),
+                InkWell(
+                  onTap: _choosePhoto,
+                  borderRadius: BorderRadius.circular(15),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _photoError
+                          ? const Color(0xFFFDE8E8)
+                          : _selectedPhotoUrl != null
+                              ? AppColors.paleGreen
+                              : AppColors.paper,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(
+                        color: _photoError
+                            ? Colors.red
+                            : _selectedPhotoUrl != null
+                                ? AppColors.green
+                                : AppColors.line,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: _selectedPhotoUrl != null
+                        ? Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.network(
+                                  _selectedPhotoUrl!,
+                                  width: 56,
+                                  height: 56,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(Icons.check_circle_rounded,
+                                            size: 16, color: AppColors.green),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Foto Terlampir',
+                                          style: TextStyle(
+                                            color: AppColors.green,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Ketuk untuk mengganti foto',
+                                      style: TextStyle(
+                                          fontSize: 11, color: AppColors.muted),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.edit_outlined,
+                                  size: 18, color: AppColors.taupe),
+                            ],
+                          )
+                        : const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_a_photo_outlined,
+                                    color: AppColors.maroon, size: 22),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Upload Bukti Foto Kegiatan (Wajib)',
+                                  style: TextStyle(
+                                    color: AppColors.maroon,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                  ),
+                ),
+                if (_photoError) ...[
+                  const SizedBox(height: 5),
+                  const Text(
+                    'Foto kegiatan wajib diupload untuk bukti pengerjaan tugas PKL',
+                    style: TextStyle(color: Colors.red, fontSize: 11),
+                  ),
+                ],
                 const SizedBox(height: 18),
                 ElevatedButton.icon(
                   onPressed: _save,
