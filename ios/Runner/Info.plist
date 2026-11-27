@@ -49,6 +49,10 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Diperlukan untuk mengambil foto presensi dan jurnal PKL</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Diperlukan untuk memilih foto dari galeri</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

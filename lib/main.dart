@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'models/app_user.dart';
 import 'screens/admin_accounts_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
-import 'screens/admin_placement_screen.dart'
-    hide PklUser, UserRole;
+import 'screens/admin_placement_screen.dart';
 import 'screens/attendance_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/journal_screen.dart';
@@ -15,6 +15,7 @@ import 'screens/teacher_attendance_screen.dart' as teacher_att;
 import 'screens/teacher_dashboard_screen.dart' as teacher_dash;
 import 'screens/teacher_reviews_screen.dart';
 import 'screens/teacher_students_screen.dart' as teacher_students;
+import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -52,8 +53,27 @@ class AppEntryFlow extends StatefulWidget {
 }
 
 class _AppEntryFlowState extends State<AppEntryFlow> {
+  final _authService = AuthService();
+
   bool _showSplash = true;
-  PklUser? _loggedInUser;
+  bool _checkingSession = true;
+  AppUser? _loggedInUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreSession();
+  }
+
+  Future<void> _restoreSession() async {
+    final user = await _authService.currentUser();
+    if (mounted) {
+      setState(() {
+        _loggedInUser = user;
+        _checkingSession = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +84,14 @@ class _AppEntryFlowState extends State<AppEntryFlow> {
             _showSplash = false;
           });
         },
+      );
+    }
+
+    if (_checkingSession) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.maroon),
+        ),
       );
     }
 
@@ -79,10 +107,13 @@ class _AppEntryFlowState extends State<AppEntryFlow> {
 
     return _RoleShell(
       user: _loggedInUser!,
-      onLogout: () {
-        setState(() {
-          _loggedInUser = null;
-        });
+      onLogout: () async {
+        await _authService.signOut();
+        if (mounted) {
+          setState(() {
+            _loggedInUser = null;
+          });
+        }
       },
       onUserUpdated: (updatedUser) {
         setState(() {
@@ -100,9 +131,9 @@ class _RoleShell extends StatefulWidget {
     this.onUserUpdated,
   });
 
-  final PklUser user;
+  final AppUser user;
   final VoidCallback onLogout;
-  final ValueChanged<PklUser>? onUserUpdated;
+  final ValueChanged<AppUser>? onUserUpdated;
 
   @override
   State<_RoleShell> createState() => _RoleShellState();
@@ -143,8 +174,9 @@ class _RoleShellState extends State<_RoleShell> {
   }
 
   List<Widget> _buildPages() {
-    return switch (widget.user.role) {
-      UserRole.admin => [
+    switch (widget.user.role) {
+      case AppRole.admin:
+        return [
           AdminDashboardScreen(
             user: widget.user,
             onManageAccounts: () => _goToTab(1),
@@ -159,25 +191,25 @@ class _RoleShellState extends State<_RoleShell> {
             onLogout: widget.onLogout,
             onUserUpdated: widget.onUserUpdated,
           ),
-        ],
-      UserRole.murid => [
+        ];
+      case AppRole.siswa:
+        return [
           DashboardScreen(
-            studentName: widget.user.name,
+            studentName: widget.user.fullName,
             onOpenAttendance: () => _goToTab(1),
             onOpenJournal: () => _goToTab(2),
             onOpenProgress: () {},
           ),
           const AttendanceScreen(),
-          JournalScreen(
-            onAddEntry: (_) {},
-          ),
+          const JournalScreen(),
           ProfileScreen(
             user: widget.user,
             onLogout: widget.onLogout,
             onUserUpdated: widget.onUserUpdated,
           ),
-        ],
-      UserRole.guru => [
+        ];
+      case AppRole.guru:
+        return [
           teacher_dash.TeacherDashboardScreen(
             onOpenStudents: () => _goToTab(1),
             onOpenAttendance: () => _goToTab(2),
@@ -191,11 +223,12 @@ class _RoleShellState extends State<_RoleShell> {
             onLogout: widget.onLogout,
             onUserUpdated: widget.onUserUpdated,
           ),
-        ],
-      UserRole.iduka => [
+        ];
+      case AppRole.mentor:
+        return [
           teacher_att.TeacherAttendanceScreen(
             isIduka: true,
-            idukaName: widget.user.name,
+            idukaName: widget.user.fullName,
           ),
           const TeacherReviewsScreen(),
           ProfileScreen(
@@ -203,13 +236,13 @@ class _RoleShellState extends State<_RoleShell> {
             onLogout: widget.onLogout,
             onUserUpdated: widget.onUserUpdated,
           ),
-        ],
-    };
+        ];
+    }
   }
 
   List<BottomNavigationBarItem> _buildNavItems() {
     return switch (widget.user.role) {
-      UserRole.admin => const [
+      AppRole.admin => const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
             activeIcon: Icon(Icons.dashboard_rounded),
@@ -231,7 +264,7 @@ class _RoleShellState extends State<_RoleShell> {
             label: 'Profil',
           ),
         ],
-      UserRole.murid => const [
+      AppRole.siswa => const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home_rounded),
@@ -253,7 +286,7 @@ class _RoleShellState extends State<_RoleShell> {
             label: 'Profil',
           ),
         ],
-      UserRole.guru => const [
+      AppRole.guru => const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home_rounded),
@@ -280,7 +313,7 @@ class _RoleShellState extends State<_RoleShell> {
             label: 'Profil',
           ),
         ],
-      UserRole.iduka => const [
+      AppRole.mentor => const [
           BottomNavigationBarItem(
             icon: Icon(Icons.fact_check_outlined),
             activeIcon: Icon(Icons.fact_check_rounded),

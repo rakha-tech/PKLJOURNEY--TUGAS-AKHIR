@@ -1,35 +1,29 @@
 import 'package:flutter/material.dart';
 
+import '../models/app_user.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
-import 'admin_accounts_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
     super.key,
-    this.user = const PklUser(
-      accountId: 'ADM001',
-      username: 'admin',
-      name: 'Administrator PKL',
-      role: UserRole.admin,
-      email: 'admin@smkn1jakarta.sch.id',
-      phoneNumber: '081234567890',
-      address: 'SMK Negeri 1 Jakarta',
-    ),
+    required this.user,
     required this.onLogout,
     this.onUserUpdated,
   });
 
-  final PklUser user;
+  final AppUser user;
   final VoidCallback onLogout;
-  final ValueChanged<PklUser>? onUserUpdated;
+  final ValueChanged<AppUser>? onUserUpdated;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  late PklUser _user;
+  final _authService = AuthService();
+  late AppUser _user;
   bool _notificationsEnabled = true;
 
   @override
@@ -46,213 +40,225 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  String _getDefaultEmail(PklUser user) {
-    if (user.email != null && user.email!.isNotEmpty) {
-      return user.email!;
-    }
-    return switch (user.role) {
-      UserRole.admin => 'admin@smkn1jakarta.sch.id',
-      UserRole.guru => '${user.username.replaceAll(' ', '').toLowerCase()}@guru.smkn1jakarta.sch.id',
-      UserRole.iduka => '${user.username.replaceAll(' ', '').toLowerCase()}@aksara.id',
-      UserRole.murid => '${user.username.replaceAll(' ', '').toLowerCase()}@siswa.smkn1jakarta.sch.id',
-    };
-  }
-
-  String _getDefaultPhone(PklUser user) {
-    if (user.phoneNumber != null && user.phoneNumber!.isNotEmpty) {
-      return user.phoneNumber!;
-    }
-    return '081234567890';
-  }
-
   Future<void> _showEditProfileDialog() async {
-    final nameController = TextEditingController(text: _user.name);
-    final emailController = TextEditingController(text: _getDefaultEmail(_user));
-    final phoneController = TextEditingController(text: _getDefaultPhone(_user));
+    final nameController = TextEditingController(text: _user.fullName);
+    final phoneController = TextEditingController(text: _user.phone ?? '');
     final formKey = GlobalKey<FormState>();
+    bool isSaving = false;
 
-    final updated = await showModalBottomSheet<PklUser>(
+    final updated = await showModalBottomSheet<AppUser>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (bottomSheetContext) {
-        return Container(
-          padding: EdgeInsets.fromLTRB(
-            22,
-            16,
-            22,
-            24 + MediaQuery.of(bottomSheetContext).viewInsets.bottom,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: AppColors.line,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        const CircleAvatar(
-                          radius: 18,
-                          backgroundColor: AppColors.cream,
-                          child: Icon(
-                            Icons.edit_outlined,
-                            color: AppColors.maroon,
-                            size: 18,
+        return StatefulBuilder(
+          builder: (ctx, setModal) => Container(
+            padding: EdgeInsets.fromLTRB(
+              22,
+              16,
+              22,
+              24 + MediaQuery.of(bottomSheetContext).viewInsets.bottom,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.line,
+                            borderRadius: BorderRadius.circular(4),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Edit Profil',
-                            style: Theme.of(bottomSheetContext)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontSize: 18),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Perbarui data diri akun Anda di sistem PKLJOURNEY.',
-                      style: TextStyle(color: AppColors.muted, fontSize: 12),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Field Nama
-                    const Text(
-                      'NAMA LENGKAP',
-                      style: TextStyle(
-                        color: AppColors.taupe,
-                        fontSize: 10,
-                        letterSpacing: 0.8,
-                        fontWeight: FontWeight.w800,
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: nameController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        hintText: 'Masukkan nama lengkap',
-                        prefixIcon: Icon(Icons.person_outline_rounded),
-                      ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                              ? 'Nama tidak boleh kosong'
-                              : null,
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Field Email
-                    const Text(
-                      'EMAIL',
-                      style: TextStyle(
-                        color: AppColors.taupe,
-                        fontSize: 10,
-                        letterSpacing: 0.8,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        hintText: 'contoh@email.com',
-                        prefixIcon: Icon(Icons.mail_outline_rounded),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Email tidak boleh kosong';
-                        }
-                        if (!value.contains('@') || !value.contains('.')) {
-                          return 'Format email tidak valid';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Field Nomor Telepon
-                    const Text(
-                      'NOMOR TELEPON / WHATSAPP',
-                      style: TextStyle(
-                        color: AppColors.taupe,
-                        fontSize: 10,
-                        letterSpacing: 0.8,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        hintText: '081234567890',
-                        prefixIcon: Icon(Icons.phone_outlined),
-                      ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                              ? 'Nomor telepon tidak boleh kosong'
-                              : null,
-                    ),
-                    const SizedBox(height: 22),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(bottomSheetContext),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: AppColors.line),
-                              minimumSize: const Size.fromHeight(48),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          const CircleAvatar(
+                            radius: 18,
+                            backgroundColor: AppColors.cream,
+                            child: Icon(
+                              Icons.edit_outlined,
+                              color: AppColors.maroon,
+                              size: 18,
                             ),
-                            child: const Text('Batal'),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              if (!formKey.currentState!.validate()) return;
-                              final updatedUser = _user.copyWith(
-                                name: nameController.text.trim(),
-                                email: emailController.text.trim(),
-                                phoneNumber: phoneController.text.trim(),
-                              );
-                              Navigator.pop(bottomSheetContext, updatedUser);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.maroon,
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size.fromHeight(48),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Edit Profil',
+                              style: Theme.of(bottomSheetContext)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(fontSize: 18),
                             ),
-                            child: const Text('Simpan Perubahan'),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Perbarui data diri akun Anda di sistem PKLJOURNEY.',
+                        style: TextStyle(color: AppColors.muted, fontSize: 12),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Field Nama
+                      const Text(
+                        'NAMA LENGKAP',
+                        style: TextStyle(
+                          color: AppColors.taupe,
+                          fontSize: 10,
+                          letterSpacing: 0.8,
+                          fontWeight: FontWeight.w800,
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: nameController,
+                        enabled: !isSaving,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                          hintText: 'Masukkan nama lengkap',
+                          prefixIcon: Icon(Icons.person_outline_rounded),
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                                ? 'Nama tidak boleh kosong'
+                                : null,
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Field Email (read-only)
+                      const Text(
+                        'EMAIL',
+                        style: TextStyle(
+                          color: AppColors.taupe,
+                          fontSize: 10,
+                          letterSpacing: 0.8,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        initialValue: _user.email,
+                        readOnly: true,
+                        enabled: false,
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.mail_outline_rounded),
+                          helperText: 'Email terhubung dengan akun autentikasi',
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Field Nomor Telepon
+                      const Text(
+                        'NOMOR TELEPON / WHATSAPP',
+                        style: TextStyle(
+                          color: AppColors.taupe,
+                          fontSize: 10,
+                          letterSpacing: 0.8,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: phoneController,
+                        enabled: !isSaving,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          hintText: '081234567890',
+                          prefixIcon: Icon(Icons.phone_outlined),
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                                ? 'Nomor telepon tidak boleh kosong'
+                                : null,
+                      ),
+                      const SizedBox(height: 22),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: isSaving
+                                  ? null
+                                  : () => Navigator.pop(bottomSheetContext),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: AppColors.line),
+                                minimumSize: const Size.fromHeight(48),
+                              ),
+                              child: const Text('Batal'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton(
+                              onPressed: isSaving
+                                  ? null
+                                  : () async {
+                                      if (!formKey.currentState!.validate()) {
+                                        return;
+                                      }
+                                      setModal(() => isSaving = true);
+                                      try {
+                                        final result =
+                                            await _authService.updateProfile(
+                                          userId: _user.userId,
+                                          fullName: nameController.text.trim(),
+                                          phone: phoneController.text.trim(),
+                                        );
+                                        if (ctx.mounted) {
+                                          Navigator.pop(
+                                              bottomSheetContext, result);
+                                        }
+                                      } catch (e) {
+                                        setModal(() => isSaving = false);
+                                        if (ctx.mounted) {
+                                          ScaffoldMessenger.of(ctx)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  'Gagal memperbarui profil: $e'),
+                                              behavior:
+                                                  SnackBarBehavior.floating,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.maroon,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size.fromHeight(48),
+                              ),
+                              child: isSaving
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text('Simpan Perubahan'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -262,7 +268,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     nameController.dispose();
-    emailController.dispose();
     phoneController.dispose();
 
     if (updated != null && mounted) {
@@ -305,16 +310,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = _user;
-    final initial = user.name.isEmpty ? '?' : user.name[0].toUpperCase();
-    final email = _getDefaultEmail(user);
-    final phone = _getDefaultPhone(user);
+    final initial =
+        user.fullName.isEmpty ? '?' : user.fullName[0].toUpperCase();
+    final email = user.email;
+    final phone =
+        (user.phone != null && user.phone!.isNotEmpty) ? user.phone! : '-';
 
     final details = switch (user.role) {
-      UserRole.admin => <Widget>[
+      AppRole.admin => <Widget>[
           _ProfileDetail(
             icon: Icons.badge_outlined,
             label: 'Username admin',
-            value: user.accountId,
+            value: user.username,
           ),
           _ProfileDetail(
             icon: Icons.mail_outline_rounded,
@@ -332,11 +339,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             value: 'Kelola akun dan monitoring PKL',
           ),
         ],
-      UserRole.guru => <Widget>[
+      AppRole.guru => <Widget>[
           _ProfileDetail(
             icon: Icons.badge_outlined,
-            label: 'NIP',
-            value: user.accountId,
+            label: 'Username',
+            value: user.username,
           ),
           _ProfileDetail(
             icon: Icons.mail_outline_rounded,
@@ -359,11 +366,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             value: 'Guru pembimbing PKL',
           ),
         ],
-      UserRole.iduka => <Widget>[
+      AppRole.mentor => <Widget>[
           _ProfileDetail(
             icon: Icons.badge_outlined,
-            label: 'ID IDUKA',
-            value: user.accountId,
+            label: 'Username',
+            value: user.username,
           ),
           _ProfileDetail(
             icon: Icons.mail_outline_rounded,
@@ -375,22 +382,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             label: 'Nomor telepon',
             value: phone,
           ),
-          _ProfileDetail(
-            icon: Icons.business_outlined,
-            label: 'Perusahaan',
-            value: user.companyName ?? 'PT Aksara Digital Nusantara',
-          ),
-          _ProfileDetail(
-            icon: Icons.location_on_outlined,
-            label: 'Alamat',
-            value: user.address ?? 'Jakarta',
+          const _ProfileDetail(
+            icon: Icons.work_outline_rounded,
+            label: 'Peran',
+            value: 'Pembimbing Lapangan (IDUKA)',
           ),
         ],
-      UserRole.murid => <Widget>[
+      AppRole.siswa => <Widget>[
           _ProfileDetail(
             icon: Icons.badge_outlined,
-            label: 'NISN',
-            value: user.accountId,
+            label: 'Username',
+            value: user.username,
           ),
           _ProfileDetail(
             icon: Icons.mail_outline_rounded,
@@ -406,16 +408,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.school_outlined,
             label: 'Sekolah',
             value: 'SMK Negeri 1 Jakarta',
-          ),
-          const _ProfileDetail(
-            icon: Icons.business_outlined,
-            label: 'Tempat PKL',
-            value: 'PT Aksara Digital Nusantara',
-          ),
-          const _ProfileDetail(
-            icon: Icons.person_outline_rounded,
-            label: 'Pembimbing',
-            value: 'Hendro Prasetyo, S.T.',
           ),
         ],
     };
@@ -463,7 +455,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        user.name,
+                        user.fullName,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 15,
@@ -473,7 +465,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 5),
                       Text(
                         user.role.label,
-                        style: const TextStyle(color: AppColors.cream, fontSize: 12),
+                        style:
+                            const TextStyle(color: AppColors.cream, fontSize: 12),
                       ),
                     ],
                   ),
@@ -557,7 +550,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 20),
           const Center(
             child: Text(
-              'PKLJOURNEY • Versi demo 1.0.0',
+              'PKLJOURNEY • Versi 1.0.0',
               style: TextStyle(
                 color: AppColors.muted,
                 fontSize: 10,
