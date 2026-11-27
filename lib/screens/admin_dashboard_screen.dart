@@ -1,309 +1,302 @@
 import 'package:flutter/material.dart';
 
+import '../models/app_user.dart';
+import '../services/admin_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
-import 'admin_accounts_screen.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({
     super.key,
-    this.user = const PklUser(
-      accountId: 'ADM001',
-      username: 'admin',
-      name: 'Administrator PKL',
-      role: UserRole.admin,
-    ),
-    this.users = const [
-      PklUser(
-        accountId: 'ADM001',
-        username: 'admin',
-        name: 'Administrator PKL',
-        role: UserRole.admin,
-      ),
-      PklUser(
-        accountId: '19820109940201',
-        username: 'budisantoso',
-        name: 'Budi Santoso, M.Pd.',
-        role: UserRole.guru,
-      ),
-      PklUser(
-        accountId: '19790512200312',
-        username: 'sitinurbaya',
-        name: 'Siti Nurbaya, S.Pd.',
-        role: UserRole.guru,
-      ),
-      PklUser(
-        accountId: '0054321980',
-        username: 'ahmadfauzi',
-        name: 'Ahmad Fauzi',
-        role: UserRole.murid,
-        mentorAccountId: '19820109940201',
-      ),
-      PklUser(
-        accountId: '0054321981',
-        username: 'sitinurhaliza',
-        name: 'Siti Nurhaliza',
-        role: UserRole.murid,
-        mentorAccountId: '19820109940201',
-      ),
-      PklUser(
-        accountId: '0054321982',
-        username: 'dimasanggara',
-        name: 'Dimas Anggara',
-        role: UserRole.murid,
-      ),
-    ],
+    required this.user,
     required this.onManageAccounts,
     this.onManageMentorship,
   });
 
-  final PklUser user;
-  final List<PklUser> users;
+  final AppUser user;
   final VoidCallback onManageAccounts;
   final VoidCallback? onManageMentorship;
 
   @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  final _adminService = AdminService();
+
+  bool _isLoading = true;
+  List<AppUser> _users = [];
+  Set<String> _assignedStudentIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMetrics();
+  }
+
+  Future<void> _loadMetrics() async {
+    setState(() => _isLoading = true);
+    try {
+      final results = await Future.wait([
+        _adminService.fetchAllUsers(),
+        _adminService.fetchAssignedStudentIds(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _users = results[0] as List<AppUser>;
+          _assignedStudentIds = results[1] as Set<String>;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final students = users
-        .where((account) => account.role == UserRole.murid)
-        .toList();
-    final teacherCount = users
-        .where((account) => account.role == UserRole.guru)
-        .length;
+    final students =
+        _users.where((account) => account.role == AppRole.siswa).toList();
+    final teacherCount =
+        _users.where((account) => account.role == AppRole.guru).length;
     final unassignedCount = students
-        .where((account) => account.mentorAccountId == null)
+        .where((account) => !_assignedStudentIds.contains(account.userId))
         .length;
 
     return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        children: [
-          const Row(
-            children: [
-              BrandMark(compact: true),
-              Spacer(),
-              InfoPill(
-                label: 'ADMIN',
-                color: AppColors.cream,
-                textColor: AppColors.maroon,
-                icon: Icons.admin_panel_settings_outlined,
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          Container(
-            padding: const EdgeInsets.all(21),
-            decoration: BoxDecoration(
-              color: AppColors.maroon,
-              borderRadius: BorderRadius.circular(23),
-              gradient: const LinearGradient(
-                colors: [AppColors.maroon, AppColors.maroonDark],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: RefreshIndicator(
+        onRefresh: _loadMetrics,
+        color: AppColors.maroon,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          children: [
+            const Row(
               children: [
-                Text(
-                  'PANEL ADMINISTRATOR',
-                  style: TextStyle(
-                    color: AppColors.cream.withValues(alpha: 0.8),
-                    fontSize: 10,
-                    letterSpacing: 1.2,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 11),
-                Text(
-                  'Halo, ${user.name.split(' ').first}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 25,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Kelola akun guru, murid, dan penetapan bimbingan PKL dari satu tempat.',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 12,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _AdminMetric(
-                        label: 'Murid',
-                        value: '${students.length}',
-                        icon: Icons.school_outlined,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _AdminMetric(
-                        label: 'Guru',
-                        value: '$teacherCount',
-                        icon: Icons.person_pin_outlined,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _AdminMetric(
-                        label: 'Total akun',
-                        value: '${users.length}',
-                        icon: Icons.groups_2_outlined,
-                      ),
-                    ),
-                  ],
+                BrandMark(compact: true),
+                Spacer(),
+                InfoPill(
+                  label: 'ADMIN',
+                  color: AppColors.cream,
+                  textColor: AppColors.maroon,
+                  icon: Icons.admin_panel_settings_outlined,
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 22),
-
-          // Mentorship Management Card
-          const SectionLabel('Penetapan bimbingan'),
-          WhiteCard(
-            padding: 16,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 21,
-                      backgroundColor: unassignedCount > 0
-                          ? AppColors.paleAmber
-                          : AppColors.paleGreen,
-                      child: Icon(
-                        unassignedCount > 0
-                            ? Icons.assignment_late_outlined
-                            : Icons.assignment_turned_in_outlined,
-                        color: unassignedCount > 0
-                            ? AppColors.amber
-                            : AppColors.green,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Guru pembimbing murid',
-                            style: TextStyle(
-                              color: AppColors.ink,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            unassignedCount > 0
-                                ? '$unassignedCount murid belum ditentukan pembimbingnya.'
-                                : 'Semua murid sudah memiliki pembimbing.',
-                            style: TextStyle(
-                              color: unassignedCount > 0
-                                  ? AppColors.amber
-                                  : AppColors.muted,
-                              fontSize: 11,
-                              fontWeight: unassignedCount > 0
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    InfoPill(
-                      label: unassignedCount > 0
-                          ? '$unassignedCount Perlu'
-                          : 'Lengkap',
-                      color: unassignedCount > 0
-                          ? AppColors.paleAmber
-                          : AppColors.paleGreen,
-                      textColor: unassignedCount > 0
-                          ? AppColors.amber
-                          : AppColors.green,
-                    ),
-                  ],
+            const SizedBox(height: 22),
+            Container(
+              padding: const EdgeInsets.all(21),
+              decoration: BoxDecoration(
+                color: AppColors.maroon,
+                borderRadius: BorderRadius.circular(23),
+                gradient: const LinearGradient(
+                  colors: [AppColors.maroon, AppColors.maroonDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                if (onManageMentorship != null) ...[
-                  const SizedBox(height: 15),
-                  ElevatedButton.icon(
-                    onPressed: onManageMentorship,
-                    icon: const Icon(Icons.assignment_ind_outlined, size: 19),
-                    label: const Text('Atur pembimbing siswa'),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'PANEL ADMINISTRATOR',
+                    style: TextStyle(
+                      color: AppColors.cream.withValues(alpha: 0.8),
+                      fontSize: 10,
+                      letterSpacing: 1.2,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 11),
+                  Text(
+                    'Halo, ${widget.user.fullName.split(' ').first}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 25,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Kelola akun guru, murid, dan penetapan bimbingan PKL dari satu tempat.',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _AdminMetric(
+                          label: 'Murid',
+                          value: _isLoading ? '-' : '${students.length}',
+                          icon: Icons.school_outlined,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _AdminMetric(
+                          label: 'Guru',
+                          value: _isLoading ? '-' : '$teacherCount',
+                          icon: Icons.person_pin_outlined,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _AdminMetric(
+                          label: 'Total akun',
+                          value: _isLoading ? '-' : '${_users.length}',
+                          icon: Icons.groups_2_outlined,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ],
+              ),
             ),
-          ),
+            const SizedBox(height: 22),
 
-          const SizedBox(height: 20),
-          const SectionLabel('Kelola akun'),
-          WhiteCard(
-            padding: 16,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 21,
-                      backgroundColor: AppColors.cream,
-                      child: Icon(
-                        Icons.person_add_alt_1_rounded,
-                        color: AppColors.maroon,
-                        size: 20,
+            // Mentorship Management Card
+            const SectionLabel('Penetapan bimbingan'),
+            WhiteCard(
+              padding: 16,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 21,
+                        backgroundColor: unassignedCount > 0
+                            ? AppColors.paleAmber
+                            : AppColors.paleGreen,
+                        child: Icon(
+                          unassignedCount > 0
+                              ? Icons.assignment_late_outlined
+                              : Icons.assignment_turned_in_outlined,
+                          color: unassignedCount > 0
+                              ? AppColors.amber
+                              : AppColors.green,
+                          size: 20,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Daftarkan guru atau murid',
-                            style: TextStyle(
-                              color: AppColors.ink,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Guru pembimbing murid',
+                              style: TextStyle(
+                                color: AppColors.ink,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Gunakan NIP untuk guru dan NISN untuk murid.',
-                            style: TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 11,
+                            const SizedBox(height: 4),
+                            Text(
+                              unassignedCount > 0
+                                  ? '$unassignedCount murid belum ditentukan pembimbingnya.'
+                                  : 'Semua murid sudah memiliki pembimbing.',
+                              style: TextStyle(
+                                color: unassignedCount > 0
+                                    ? AppColors.amber
+                                    : AppColors.muted,
+                                fontSize: 11,
+                                fontWeight: unassignedCount > 0
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      InfoPill(
+                        label: unassignedCount > 0
+                            ? '$unassignedCount Perlu'
+                            : 'Lengkap',
+                        color: unassignedCount > 0
+                            ? AppColors.paleAmber
+                            : AppColors.paleGreen,
+                        textColor: unassignedCount > 0
+                            ? AppColors.amber
+                            : AppColors.green,
+                      ),
+                    ],
+                  ),
+                  if (widget.onManageMentorship != null) ...[
+                    const SizedBox(height: 15),
+                    ElevatedButton.icon(
+                      onPressed: widget.onManageMentorship,
+                      icon: const Icon(Icons.assignment_ind_outlined, size: 19),
+                      label: const Text('Atur pembimbing siswa'),
                     ),
                   ],
-                ),
-                const SizedBox(height: 15),
-                OutlinedButton.icon(
-                  onPressed: onManageAccounts,
-                  icon: const Icon(Icons.manage_accounts_outlined, size: 19),
-                  label: const Text('Buka pengelolaan akun'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.maroon,
-                    side: const BorderSide(color: AppColors.maroon),
-                    minimumSize: const Size.fromHeight(48),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+
+            const SizedBox(height: 20),
+            const SectionLabel('Kelola akun'),
+            WhiteCard(
+              padding: 16,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 21,
+                        backgroundColor: AppColors.cream,
+                        child: Icon(
+                          Icons.person_add_alt_1_rounded,
+                          color: AppColors.maroon,
+                          size: 20,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Daftar akun terdaftar',
+                              style: TextStyle(
+                                color: AppColors.ink,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Lihat dan kelola seluruh akun siswa, guru, dan mentor.',
+                              style: TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 15),
+                  OutlinedButton.icon(
+                    onPressed: widget.onManageAccounts,
+                    icon: const Icon(Icons.manage_accounts_outlined, size: 19),
+                    label: const Text('Buka pengelolaan akun'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.maroon,
+                      side: const BorderSide(color: AppColors.maroon),
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

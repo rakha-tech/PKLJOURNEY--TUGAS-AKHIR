@@ -1,183 +1,185 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../models/attendance_record.dart' show ApprovalStatus;
+import '../models/journal_entry.dart';
+import '../services/journal_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
 
-class JournalEntry {
-  const JournalEntry({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.date,
-    required this.time,
-    required this.tag,
-    this.imageUrl,
-  });
-
-  final String id;
-  final String title;
-  final String description;
-  final String date;
-  final String time;
-  final String tag;
-  final String? imageUrl;
-}
-
 class JournalScreen extends StatefulWidget {
-  const JournalScreen({
-    super.key,
-    this.entries = const [
-      JournalEntry(
-        id: 'journal-001',
-        title: 'Orientasi lingkungan kerja',
-        description:
-            'Mengenal tim, aturan kerja, dan alur kegiatan di tempat PKL.',
-        date: '26 November 2026',
-        time: '08.15',
-        tag: 'Orientasi',
-        imageUrl: PklPhotoPresets.meeting,
-      ),
-      JournalEntry(
-        id: 'journal-002',
-        title: 'Membuat halaman profil',
-        description: 'Menyusun tampilan halaman profil dan mempelajari widget dasar Flutter.',
-        date: '25 November 2026',
-        time: '13.40',
-        tag: 'Proyek',
-        imageUrl: PklPhotoPresets.uiDesign,
-      ),
-      JournalEntry(
-        id: 'journal-003',
-        title: 'Belajar Git dan version control',
-        description: 'Mencoba membuat branch dan mencatat perubahan kode menggunakan Git.',
-        date: '24 November 2026',
-        time: '10.05',
-        tag: 'Pembelajaran',
-        imageUrl: PklPhotoPresets.coding,
-      ),
-    ],
-    required this.onAddEntry,
-  });
-
-  final List<JournalEntry> entries;
-  final ValueChanged<JournalEntry> onAddEntry;
+  const JournalScreen({super.key});
 
   @override
   State<JournalScreen> createState() => _JournalScreenState();
 }
 
 class _JournalScreenState extends State<JournalScreen> {
+  final _journalService = JournalService();
+
+  bool _isLoading = true;
+  final List<JournalEntry> _entries = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadJournals();
+  }
+
+  Future<void> _loadJournals() async {
+    setState(() => _isLoading = true);
+    try {
+      final list = await _journalService.fetchMyJournals();
+      if (mounted) {
+        setState(() {
+          _entries
+            ..clear()
+            ..addAll(list);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat jurnal: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _openEntryForm() async {
     final entry = await showModalBottomSheet<JournalEntry>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const _JournalFormSheet(),
+      builder: (context) => _JournalFormSheet(journalService: _journalService),
     );
-    if (entry != null) widget.onAddEntry(entry);
+    if (entry != null && mounted) {
+      setState(() {
+        _entries.insert(0, entry);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jurnal berhasil disimpan dan diunggah.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.green,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-        children: [
-          PageHeading(
-            title: 'Jurnal kegiatan',
-            subtitle: 'Simpan pengalaman dan hal baru yang kamu pelajari.',
-            trailing: IconButton.filled(
-              onPressed: _openEntryForm,
-              tooltip: 'Tambah jurnal',
-              icon: const Icon(Icons.add_rounded),
-              style: IconButton.styleFrom(
-                backgroundColor: AppColors.maroon,
-                foregroundColor: Colors.white,
+      child: RefreshIndicator(
+        onRefresh: _loadJournals,
+        color: AppColors.maroon,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          children: [
+            PageHeading(
+              title: 'Jurnal kegiatan',
+              subtitle: 'Simpan pengalaman dan hal baru yang kamu pelajari.',
+              trailing: IconButton.filled(
+                onPressed: _openEntryForm,
+                tooltip: 'Tambah jurnal',
+                icon: const Icon(Icons.add_rounded),
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.maroon,
+                  foregroundColor: Colors.white,
+                ),
               ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(17),
-            decoration: BoxDecoration(
-              color: AppColors.paleAmber,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.cream),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.lightbulb_outline_rounded, color: AppColors.amber),
-                SizedBox(width: 11),
-                Expanded(
-                  child: Text(
-                    'Catatan kecil hari ini bisa jadi bekal besar untuk masa depan.',
-                    style: TextStyle(
-                      color: AppColors.taupe,
-                      fontSize: 12,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 22),
-          SectionLabel(
-            'Catatanmu',
-            action: '${widget.entries.length} kegiatan',
-          ),
-          if (widget.entries.isEmpty)
-            WhiteCard(
-              child: Column(
+            Container(
+              padding: const EdgeInsets.all(17),
+              decoration: BoxDecoration(
+                color: AppColors.paleAmber,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.cream),
+              ),
+              child: const Row(
                 children: [
-                  const Icon(
-                    Icons.menu_book_outlined,
-                    color: AppColors.maroon,
-                    size: 38,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Belum ada jurnal',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Mulai catat pengalaman PKL pertamamu hari ini.',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 14),
-                  OutlinedButton.icon(
-                    onPressed: _openEntryForm,
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Tulis jurnal'),
+                  Icon(Icons.lightbulb_outline_rounded, color: AppColors.amber),
+                  SizedBox(width: 11),
+                  Expanded(
+                    child: Text(
+                      'Catatan kecil hari ini bisa jadi bekal besar untuk masa depan.',
+                      style: TextStyle(
+                        color: AppColors.taupe,
+                        fontSize: 12,
+                        height: 1.5,
+                      ),
+                    ),
                   ),
                 ],
               ),
-            )
-          else
-            ...widget.entries.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _JournalCard(entry: entry),
+            ),
+            const SizedBox(height: 22),
+            SectionLabel(
+              'Catatanmu',
+              action: '${_entries.length} kegiatan',
+            ),
+            if (_isLoading && _entries.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.maroon),
+                ),
+              )
+            else if (_entries.isEmpty)
+              WhiteCard(
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.menu_book_outlined,
+                      color: AppColors.maroon,
+                      size: 38,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Belum ada jurnal',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Mulai catat pengalaman PKL pertamamu hari ini.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 14),
+                    OutlinedButton.icon(
+                      onPressed: _openEntryForm,
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Tulis jurnal'),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ..._entries.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _JournalCard(entry: entry),
+                ),
+              ),
+            const SizedBox(height: 5),
+            OutlinedButton.icon(
+              onPressed: _openEntryForm,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Tambah catatan kegiatan'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.maroon,
+                side: const BorderSide(color: AppColors.maroon),
+                minimumSize: const Size.fromHeight(48),
               ),
             ),
-          const SizedBox(height: 5),
-          OutlinedButton.icon(
-            onPressed: _openEntryForm,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Tambah catatan kegiatan'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.maroon,
-              side: const BorderSide(color: AppColors.maroon),
-              minimumSize: const Size.fromHeight(48),
-            ),
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'Jurnal tersimpan selama aplikasi demo terbuka.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, fontSize: 10),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -190,6 +192,12 @@ class _JournalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final (pillBg, pillText) = switch (entry.status) {
+      ApprovalStatus.approved => (AppColors.paleGreen, AppColors.green),
+      ApprovalStatus.rejected => (const Color(0xFFFDE8E8), Colors.red.shade700),
+      ApprovalStatus.pending => (AppColors.paleAmber, AppColors.amber),
+    };
+
     return WhiteCard(
       padding: 16,
       child: Column(
@@ -199,7 +207,7 @@ class _JournalCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  entry.date,
+                  entry.dateLabel,
                   style: const TextStyle(
                     color: AppColors.muted,
                     fontSize: 11,
@@ -208,9 +216,9 @@ class _JournalCard extends StatelessWidget {
                 ),
               ),
               InfoPill(
-                label: entry.tag,
-                color: AppColors.cream,
-                textColor: AppColors.taupe,
+                label: entry.statusLabel,
+                color: pillBg,
+                textColor: pillText,
               ),
             ],
           ),
@@ -218,10 +226,32 @@ class _JournalCard extends StatelessWidget {
           Text(entry.title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 6),
           Text(entry.description),
-          if (entry.imageUrl != null) ...[
+          if (entry.status == ApprovalStatus.rejected &&
+              entry.rejectionNote != null &&
+              entry.rejectionNote!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFDE8E8),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Catatan penolakan: ${entry.rejectionNote}',
+                style: TextStyle(
+                  color: Colors.red.shade800,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+          if (entry.documentPhoto != null &&
+              entry.documentPhoto!.isNotEmpty) ...[
             const SizedBox(height: 12),
             PklPhotoThumbnail(
-              imageUrl: entry.imageUrl!,
+              imageUrl: entry.documentPhoto!,
               height: 140,
               caption: 'Foto Dokumentasi Kegiatan: ${entry.title}',
             ),
@@ -236,7 +266,7 @@ class _JournalCard extends StatelessWidget {
               ),
               const SizedBox(width: 5),
               Text(
-                'Ditambahkan pukul ${entry.time}',
+                'Ditambahkan pukul ${entry.timeLabel}',
                 style: const TextStyle(color: AppColors.muted, fontSize: 10),
               ),
             ],
@@ -248,7 +278,9 @@ class _JournalCard extends StatelessWidget {
 }
 
 class _JournalFormSheet extends StatefulWidget {
-  const _JournalFormSheet();
+  const _JournalFormSheet({required this.journalService});
+
+  final JournalService journalService;
 
   @override
   State<_JournalFormSheet> createState() => _JournalFormSheetState();
@@ -258,9 +290,11 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  String _tag = 'Kegiatan';
-  String? _selectedPhotoUrl;
+  final _picker = ImagePicker();
+
+  File? _selectedPhotoFile;
   bool _photoError = false;
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -269,8 +303,21 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
     super.dispose();
   }
 
+  Future<void> _pickImage(ImageSource source) async {
+    final xFile = await _picker.pickImage(
+      source: source,
+      imageQuality: 80,
+      maxWidth: 1280,
+    );
+    if (xFile == null || !mounted) return;
+    setState(() {
+      _selectedPhotoFile = File(xFile.path);
+      _photoError = false;
+    });
+  }
+
   void _choosePhoto() {
-    showModalBottomSheet<String>(
+    showModalBottomSheet<ImageSource>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (pickerContext) => Container(
@@ -314,9 +361,8 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(pickerContext, PklPhotoPresets.coding);
-                      },
+                      onPressed: () =>
+                          Navigator.pop(pickerContext, ImageSource.camera),
                       icon: const Icon(Icons.camera_alt_rounded, size: 18),
                       label: const Text('Buka Kamera'),
                       style: ElevatedButton.styleFrom(
@@ -327,9 +373,8 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(pickerContext, PklPhotoPresets.uiDesign);
-                      },
+                      onPressed: () =>
+                          Navigator.pop(pickerContext, ImageSource.gallery),
                       icon: const Icon(Icons.photo_library_rounded, size: 18),
                       label: const Text('Pilih Galeri'),
                       style: OutlinedButton.styleFrom(
@@ -344,25 +389,22 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
           ),
         ),
       ),
-    ).then((chosen) {
-      if (chosen != null) {
-        setState(() {
-          _selectedPhotoUrl = chosen;
-          _photoError = false;
-        });
+    ).then((source) {
+      if (source != null) {
+        _pickImage(source);
       }
     });
   }
 
-  void _save() {
+  Future<void> _save() async {
     final isFormValid = _formKey.currentState?.validate() ?? false;
-    if (_selectedPhotoUrl == null) {
+    if (_selectedPhotoFile == null) {
       setState(() {
         _photoError = true;
       });
     }
 
-    if (!isFormValid || _selectedPhotoUrl == null) {
+    if (!isFormValid || _selectedPhotoFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Wajib melampirkan foto dokumentasi kegiatan!'),
@@ -373,18 +415,28 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
       return;
     }
 
-    final now = DateTime.now();
-    final entry = JournalEntry(
-      id: now.microsecondsSinceEpoch.toString(),
-      title: _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
-      date: currentDateLabel(),
-      time:
-          '${now.hour.toString().padLeft(2, '0')}.${now.minute.toString().padLeft(2, '0')}',
-      tag: _tag,
-      imageUrl: _selectedPhotoUrl,
-    );
-    Navigator.of(context).pop(entry);
+    setState(() => _isSaving = true);
+    try {
+      final entry = await widget.journalService.addJournal(
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        photoFile: _selectedPhotoFile!,
+      );
+      if (mounted) {
+        Navigator.of(context).pop(entry);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyimpan jurnal: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.maroon,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -427,6 +479,7 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
                 const SizedBox(height: 7),
                 TextFormField(
                   controller: _titleController,
+                  enabled: !_isSaving,
                   textCapitalization: TextCapitalization.sentences,
                   decoration: const InputDecoration(
                     hintText: 'Contoh: Membuat halaman profil',
@@ -440,11 +493,13 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
                 const SizedBox(height: 7),
                 TextFormField(
                   controller: _descriptionController,
+                  enabled: !_isSaving,
                   minLines: 3,
                   maxLines: 5,
                   textCapitalization: TextCapitalization.sentences,
                   decoration: const InputDecoration(
-                    hintText: 'Tuliskan ringkasan kegiatan dan hal yang kamu pelajari...',
+                    hintText:
+                        'Tuliskan ringkasan kegiatan dan hal yang kamu pelajari...',
                     alignLabelWithHint: true,
                   ),
                   validator: (value) => value == null || value.trim().length < 8
@@ -452,34 +507,10 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
                       : null,
                 ),
                 const SizedBox(height: 15),
-                const _FormLabel('KATEGORI'),
-                const SizedBox(height: 7),
-                DropdownButtonFormField<String>(
-                  value: _tag,
-                  decoration: const InputDecoration(),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'Kegiatan',
-                      child: Text('Kegiatan'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Pembelajaran',
-                      child: Text('Pembelajaran'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Orientasi',
-                      child: Text('Orientasi'),
-                    ),
-                    DropdownMenuItem(value: 'Proyek', child: Text('Proyek')),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _tag = value ?? 'Kegiatan'),
-                ),
-                const SizedBox(height: 15),
                 const _FormLabel('FOTO DOKUMENTASI KEGIATAN *'),
                 const SizedBox(height: 7),
                 InkWell(
-                  onTap: _choosePhoto,
+                  onTap: _isSaving ? null : _choosePhoto,
                   borderRadius: BorderRadius.circular(15),
                   child: Container(
                     width: double.infinity,
@@ -487,26 +518,26 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
                     decoration: BoxDecoration(
                       color: _photoError
                           ? const Color(0xFFFDE8E8)
-                          : _selectedPhotoUrl != null
+                          : _selectedPhotoFile != null
                               ? AppColors.paleGreen
                               : AppColors.paper,
                       borderRadius: BorderRadius.circular(15),
                       border: Border.all(
                         color: _photoError
                             ? Colors.red
-                            : _selectedPhotoUrl != null
+                            : _selectedPhotoFile != null
                                 ? AppColors.green
                                 : AppColors.line,
                         width: 1.5,
                       ),
                     ),
-                    child: _selectedPhotoUrl != null
+                    child: _selectedPhotoFile != null
                         ? Row(
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                child: Image.network(
-                                  _selectedPhotoUrl!,
+                                child: Image.file(
+                                  _selectedPhotoFile!,
                                   width: 56,
                                   height: 56,
                                   fit: BoxFit.cover,
@@ -575,9 +606,18 @@ class _JournalFormSheetState extends State<_JournalFormSheet> {
                 ],
                 const SizedBox(height: 18),
                 ElevatedButton.icon(
-                  onPressed: _save,
-                  icon: const Icon(Icons.check_rounded),
-                  label: const Text('Simpan jurnal'),
+                  onPressed: _isSaving ? null : _save,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.check_rounded),
+                  label: Text(_isSaving ? 'Mengunggah...' : 'Simpan jurnal'),
                 ),
               ],
             ),

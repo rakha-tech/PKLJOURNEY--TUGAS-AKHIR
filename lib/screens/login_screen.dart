@@ -1,44 +1,19 @@
-import 'package:flutter/material.dart';
+// lib/screens/login_screen.dart
+// Login menggunakan Supabase Auth (email + password).
+// Chip demo dihapus; user wajib gunakan akun nyata dari Supabase Auth.
 
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../models/app_user.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
-import 'admin_accounts_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({
-    super.key,
-    this.users = const [
-      PklUser(
-        accountId: 'ADM001',
-        username: 'admin',
-        name: 'Administrator PKL',
-        role: UserRole.admin,
-      ),
-      PklUser(
-        accountId: '0054321980',
-        username: 'ahmadfauzi',
-        name: 'Ahmad Fauzi',
-        role: UserRole.murid,
-      ),
-      PklUser(
-        accountId: '19820109940201',
-        username: 'budisantoso',
-        name: 'Budi Santoso, M.Pd.',
-        role: UserRole.guru,
-      ),
-      PklUser(
-        accountId: 'IDUKA-001',
-        username: 'hendro_aksara',
-        name: 'Hendro Prasetyo, S.T.',
-        role: UserRole.iduka,
-        companyName: 'PT Aksara Digital Nusantara',
-      ),
-    ],
-    required this.onLogin,
-  });
+  const LoginScreen({super.key, required this.onLogin});
 
-  final List<PklUser> users;
-  final ValueChanged<PklUser> onLogin;
+  final ValueChanged<AppUser> onLogin;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -46,52 +21,56 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AuthService();
+
   bool _obscurePassword = true;
-  bool _rememberMe = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _fillDemo(PklUser user) {
-    setState(() {
-      _usernameController.text = user.username;
-      _passwordController.text = user.password;
-    });
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    FocusScope.of(context).unfocus();
+
+    setState(() => _isLoading = true);
+    try {
+      final user = await _authService.signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      if (mounted) widget.onLogin(user);
+    } on AuthException catch (e) {
+      if (mounted) {
+        _showError(e.message);
+      }
+    } on PostgrestException catch (e) {
+      if (mounted) {
+        _showError('Gagal mengambil profil (${e.code ?? 'DB'}): ${e.message}');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError('Gagal masuk: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
-  void _submit() {
-    if (_formKey.currentState?.validate() ?? false) {
-      FocusScope.of(context).unfocus();
-      final entered = _usernameController.text.trim().toLowerCase();
-      PklUser? matchedUser;
-
-      for (final user in widget.users) {
-        final matchIdentifier =
-            user.username.toLowerCase() == entered ||
-            user.accountId.toLowerCase() == entered;
-        if (matchIdentifier && user.password == _passwordController.text) {
-          matchedUser = user;
-          break;
-        }
-      }
-
-      if (matchedUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Username/ID atau kata sandi tidak sesuai.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        return;
-      }
-      widget.onLogin(matchedUser);
-    }
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.red.shade700,
+      ),
+    );
   }
 
   void _showForgotPassword() {
@@ -167,69 +146,31 @@ class _LoginScreenState extends State<LoginScreen> {
                                   fontSize: 13,
                                 ),
                               ),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 24),
 
-                              // Quick Fill Demo Accounts (Admin, Murid, Guru, Mentor/IDUKA)
-                              const _FieldLabel('PILIH AKUN DEMO'),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: widget.users.map((user) {
-                                  final roleLabel = user.role == UserRole.iduka
-                                      ? 'Mentor'
-                                      : user.role.label;
-                                  return ActionChip(
-                                    avatar: Icon(
-                                      switch (user.role) {
-                                        UserRole.admin =>
-                                          Icons.admin_panel_settings_rounded,
-                                        UserRole.murid => Icons.school_rounded,
-                                        UserRole.guru =>
-                                          Icons.person_pin_rounded,
-                                        UserRole.iduka =>
-                                          Icons.business_rounded,
-                                      },
-                                      size: 15,
-                                      color: AppColors.maroon,
-                                    ),
-                                    label: Text(
-                                      roleLabel,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.maroon,
-                                      ),
-                                    ),
-                                    backgroundColor: Colors.white,
-                                    side: const BorderSide(
-                                      color: AppColors.line,
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                      vertical: 0,
-                                    ),
-                                    onPressed: () => _fillDemo(user),
-                                  );
-                                }).toList(),
-                              ),
-                              const SizedBox(height: 18),
-
-                              const _FieldLabel('USERNAME / ID / NISN / NIP'),
+                              const _FieldLabel('EMAIL'),
                               const SizedBox(height: 8),
                               TextFormField(
-                                controller: _usernameController,
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
                                 textInputAction: TextInputAction.next,
+                                autocorrect: false,
                                 decoration: const InputDecoration(
-                                  hintText: 'Masukkan username atau nomor identitas',
-                                  prefixIcon: Icon(Icons.badge_outlined),
+                                  hintText: 'Masukkan email akunmu',
+                                  prefixIcon: Icon(Icons.email_outlined),
                                 ),
-                                validator: (value) =>
-                                    value == null || value.trim().isEmpty
-                                        ? 'Masukkan username atau nomor identitas'
-                                        : null,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Masukkan email';
+                                  }
+                                  if (!value.contains('@')) {
+                                    return 'Format email tidak valid';
+                                  }
+                                  return null;
+                                },
                               ),
                               const SizedBox(height: 18),
+
                               const _FieldLabel('PASSWORD'),
                               const SizedBox(height: 8),
                               TextFormField(
@@ -245,8 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ? 'Tampilkan kata sandi'
                                         : 'Sembunyikan kata sandi',
                                     onPressed: () => setState(
-                                      () =>
-                                          _obscurePassword = !_obscurePassword,
+                                      () => _obscurePassword = !_obscurePassword,
                                     ),
                                     icon: Icon(
                                       _obscurePassword
@@ -260,48 +200,33 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ? 'Masukkan kata sandi'
                                         : null,
                               ),
-                              const SizedBox(height: 9),
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: _rememberMe,
-                                    activeColor: AppColors.maroon,
-                                    visualDensity: VisualDensity.compact,
-                                    onChanged: (value) => setState(
-                                      () => _rememberMe = value ?? false,
-                                    ),
+
+                              const SizedBox(height: 10),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: _showForgotPassword,
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: AppColors.maroon,
+                                    padding: EdgeInsets.zero,
                                   ),
-                                  const Text(
-                                    'Ingat saya',
-                                    style: TextStyle(fontSize: 13),
-                                  ),
-                                  const Spacer(),
-                                  TextButton(
-                                    onPressed: _showForgotPassword,
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: AppColors.maroon,
-                                      padding: EdgeInsets.zero,
-                                    ),
-                                    child: const Text('Lupa password?'),
-                                  ),
-                                ],
+                                  child: const Text('Lupa password?'),
+                                ),
                               ),
                               const SizedBox(height: 6),
                               ElevatedButton.icon(
-                                onPressed: _submit,
-                                icon: const Icon(Icons.login_rounded, size: 19),
-                                label: const Text('Masuk'),
-                              ),
-                              const SizedBox(height: 16),
-                              Center(
-                                child: Text(
-                                  'Ketuk salah satu role di atas untuk otomatis mengisi data login.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: AppColors.muted.withValues(alpha: 0.9),
-                                    fontSize: 11,
-                                  ),
-                                ),
+                                onPressed: _isLoading ? null : _submit,
+                                icon: _isLoading
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.login_rounded, size: 19),
+                                label: Text(_isLoading ? 'Masuk...' : 'Masuk'),
                               ),
                             ],
                           ),
