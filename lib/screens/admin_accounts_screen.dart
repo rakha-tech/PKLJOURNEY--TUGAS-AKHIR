@@ -32,6 +32,7 @@ class PklUser {
     required this.name,
     required this.role,
     this.password = '123456',
+    this.email,
     this.companyName,
     this.address,
     this.phoneNumber,
@@ -43,10 +44,37 @@ class PklUser {
   final String name;
   final UserRole role;
   final String password;
+  final String? email;
   final String? companyName;
   final String? address;
   final String? phoneNumber;
   final String? mentorAccountId;
+
+  PklUser copyWith({
+    String? accountId,
+    String? username,
+    String? name,
+    UserRole? role,
+    String? password,
+    String? email,
+    String? companyName,
+    String? address,
+    String? phoneNumber,
+    String? mentorAccountId,
+  }) {
+    return PklUser(
+      accountId: accountId ?? this.accountId,
+      username: username ?? this.username,
+      name: name ?? this.name,
+      role: role ?? this.role,
+      password: password ?? this.password,
+      email: email ?? this.email,
+      companyName: companyName ?? this.companyName,
+      address: address ?? this.address,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      mentorAccountId: mentorAccountId ?? this.mentorAccountId,
+    );
+  }
 }
 
 class AdminAccountsScreen extends StatefulWidget {

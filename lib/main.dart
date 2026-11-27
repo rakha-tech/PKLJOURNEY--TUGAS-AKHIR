@@ -84,6 +84,11 @@ class _AppEntryFlowState extends State<AppEntryFlow> {
           _loggedInUser = null;
         });
       },
+      onUserUpdated: (updatedUser) {
+        setState(() {
+          _loggedInUser = updatedUser;
+        });
+      },
     );
   }
 }
@@ -92,10 +97,12 @@ class _RoleShell extends StatefulWidget {
   const _RoleShell({
     required this.user,
     required this.onLogout,
+    this.onUserUpdated,
   });
 
   final PklUser user;
   final VoidCallback onLogout;
+  final ValueChanged<PklUser>? onUserUpdated;
 
   @override
   State<_RoleShell> createState() => _RoleShellState();
@@ -150,6 +157,7 @@ class _RoleShellState extends State<_RoleShell> {
           ProfileScreen(
             user: widget.user,
             onLogout: widget.onLogout,
+            onUserUpdated: widget.onUserUpdated,
           ),
         ],
       UserRole.murid => [
@@ -166,6 +174,7 @@ class _RoleShellState extends State<_RoleShell> {
           ProfileScreen(
             user: widget.user,
             onLogout: widget.onLogout,
+            onUserUpdated: widget.onUserUpdated,
           ),
         ],
       UserRole.guru => [
@@ -180,6 +189,7 @@ class _RoleShellState extends State<_RoleShell> {
           ProfileScreen(
             user: widget.user,
             onLogout: widget.onLogout,
+            onUserUpdated: widget.onUserUpdated,
           ),
         ],
       UserRole.iduka => [
@@ -191,6 +201,7 @@ class _RoleShellState extends State<_RoleShell> {
           ProfileScreen(
             user: widget.user,
             onLogout: widget.onLogout,
+            onUserUpdated: widget.onUserUpdated,
           ),
         ],
     };
