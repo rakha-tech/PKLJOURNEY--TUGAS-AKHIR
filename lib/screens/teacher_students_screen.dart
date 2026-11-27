@@ -16,12 +16,16 @@ class PklUser {
     required this.name,
     required this.role,
     this.mentorAccountId,
+    this.phoneNumber,
+    this.email,
   });
 
   final String accountId;
   final String name;
   final UserRole role;
   final String? mentorAccountId;
+  final String? phoneNumber;
+  final String? email;
 }
 
 class InternshipLocation {
@@ -53,24 +57,32 @@ class TeacherStudentsScreen extends StatefulWidget {
         name: 'Ahmad Fauzi',
         role: UserRole.murid,
         mentorAccountId: 'GURU001',
+        phoneNumber: '085712345678',
+        email: 'ahmadfauzi@siswa.smkn1jakarta.sch.id',
       ),
       PklUser(
         accountId: '0054321981',
         name: 'Siti Nurhaliza',
         role: UserRole.murid,
         mentorAccountId: 'GURU001',
+        phoneNumber: '085712345679',
+        email: 'sitinurhaliza@siswa.smkn1jakarta.sch.id',
       ),
       PklUser(
         accountId: '0054321982',
         name: 'Dimas Anggara',
         role: UserRole.murid,
         mentorAccountId: 'GURU001',
+        phoneNumber: '085712345680',
+        email: 'dimasanggara@siswa.smkn1jakarta.sch.id',
       ),
       PklUser(
         accountId: '0054321983',
         name: 'Rizky Pratama',
         role: UserRole.murid,
         mentorAccountId: 'GURU001',
+        phoneNumber: '085712345681',
+        email: 'rizkypratama@siswa.smkn1jakarta.sch.id',
       ),
     ],
     this.location = const InternshipLocation(
@@ -78,6 +90,9 @@ class TeacherStudentsScreen extends StatefulWidget {
       address:
           'Gedung Menara Sudirman Lt. 12, Jl. Jend. Sudirman Kav. 28, Jakarta Pusat',
     ),
+    this.idukaMentorName = 'Hendro Prasetyo, S.T.',
+    this.idukaMentorPhone = '081398765432',
+    this.idukaMentorEmail = 'hendro.prasetyo@aksara.id',
     this.onAddStudent,
     this.onSaveLocation,
   });
@@ -85,6 +100,9 @@ class TeacherStudentsScreen extends StatefulWidget {
   final PklUser teacher;
   final List<PklUser> users;
   final InternshipLocation? location;
+  final String idukaMentorName;
+  final String idukaMentorPhone;
+  final String idukaMentorEmail;
   final ValueChanged<PklUser>? onAddStudent;
   final ValueChanged<InternshipLocation>? onSaveLocation;
 
@@ -116,6 +134,232 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
             account.mentorAccountId == widget.teacher.accountId,
       )
       .toList();
+
+  void _showStudentContact(BuildContext context, PklUser student) {
+    final phone = student.phoneNumber ?? '085712345678';
+    final email = student.email ?? '${student.name.toLowerCase().replaceAll(' ', '')}@siswa.smkn1jakarta.sch.id';
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.line,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: AppColors.cream,
+                    child: Text(
+                      student.name.isEmpty ? '?' : student.name[0].toUpperCase(),
+                      style: const TextStyle(
+                        color: AppColors.maroon,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          student.name,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'NISN ${student.accountId} • Siswa PKL',
+                          style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                tileColor: AppColors.paper,
+                leading: const CircleAvatar(
+                  backgroundColor: AppColors.green,
+                  radius: 18,
+                  child: Icon(Icons.chat_rounded, color: Colors.white, size: 18),
+                ),
+                title: const Text('WhatsApp Murid', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                subtitle: Text(phone, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.muted),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Membuka WhatsApp ke ${student.name} ($phone)'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                tileColor: AppColors.paper,
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFF2E6B8B),
+                  radius: 18,
+                  child: Icon(Icons.mail_rounded, color: Colors.white, size: 18),
+                ),
+                title: const Text('Kirim Email', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                subtitle: Text(email, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.muted),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Membuka email ke: $email'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showMentorContact(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.line,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 22,
+                    backgroundColor: AppColors.paleGreen,
+                    child: Icon(Icons.business_center_rounded, color: AppColors.green),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.idukaMentorName,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Pembimbing IDUKA • ${_currentLocation?.companyName ?? 'Industri'}',
+                          style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                tileColor: AppColors.paper,
+                leading: const CircleAvatar(
+                  backgroundColor: AppColors.green,
+                  radius: 18,
+                  child: Icon(Icons.chat_rounded, color: Colors.white, size: 18),
+                ),
+                title: const Text('WhatsApp Mentor IDUKA', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                subtitle: Text(widget.idukaMentorPhone, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.muted),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Membuka WhatsApp ke Mentor IDUKA (${widget.idukaMentorPhone})'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                tileColor: AppColors.paper,
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFF2E6B8B),
+                  radius: 18,
+                  child: Icon(Icons.mail_rounded, color: Colors.white, size: 18),
+                ),
+                title: const Text('Kirim Email', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                subtitle: Text(widget.idukaMentorEmail, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.muted),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Membuka email ke: ${widget.idukaMentorEmail}'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Future<void> _editLocation(BuildContext context) async {
     final companyController = TextEditingController(
@@ -278,6 +522,33 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
                           height: 1.4,
                         ),
                       ),
+                      const SizedBox(height: 6),
+                      InkWell(
+                        onTap: () => _showMentorContact(context),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.paleGreen,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.support_agent_rounded, size: 13, color: AppColors.green),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Hubungi Mentor: ${widget.idukaMentorName}',
+                                style: const TextStyle(
+                                  color: AppColors.green,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -387,6 +658,16 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
                           ],
                         ),
                       ),
+                      IconButton(
+                        onPressed: () => _showStudentContact(context, student),
+                        tooltip: 'Hubungi murid',
+                        icon: const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          color: AppColors.maroon,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
                       const Icon(
                         Icons.check_circle_outline_rounded,
                         color: AppColors.green,

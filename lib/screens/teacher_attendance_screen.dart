@@ -28,6 +28,7 @@ class PklUser {
     this.companyName,
     this.address,
     this.phoneNumber,
+    this.email,
   });
 
   final String accountId;
@@ -38,6 +39,7 @@ class PklUser {
   final String? companyName;
   final String? address;
   final String? phoneNumber;
+  final String? email;
 }
 
 class AttendanceRecord {
@@ -192,29 +194,40 @@ class TeacherAttendanceScreen extends StatefulWidget {
         name: 'Ahmad Fauzi',
         role: UserRole.murid,
         mentorAccountId: '19820109940201',
+        phoneNumber: '085712345678',
+        email: 'ahmadfauzi@siswa.smkn1jakarta.sch.id',
       ),
       PklUser(
         accountId: '0054321981',
         name: 'Siti Nurhaliza',
         role: UserRole.murid,
         mentorAccountId: '19820109940201',
+        phoneNumber: '085712345679',
+        email: 'sitinurhaliza@siswa.smkn1jakarta.sch.id',
       ),
       PklUser(
         accountId: '0054321982',
         name: 'Dimas Anggara',
         role: UserRole.murid,
         mentorAccountId: '19820109940201',
+        phoneNumber: '085712345680',
+        email: 'dimasanggara@siswa.smkn1jakarta.sch.id',
       ),
       PklUser(
         accountId: '0054321983',
         name: 'Rizky Pratama',
         role: UserRole.murid,
         mentorAccountId: '19820109940201',
+        phoneNumber: '085712345681',
+        email: 'rizkypratama@siswa.smkn1jakarta.sch.id',
       ),
     ],
     Map<String, List<AttendanceRecord>>? attendanceRecords,
     this.isIduka = false,
     this.idukaName = 'Hendro Prasetyo, S.T.',
+    this.teacherName = 'Budi Santoso, M.Pd.',
+    this.teacherPhone = '081234567891',
+    this.teacherEmail = 'budisantoso@guru.smkn1jakarta.sch.id',
     this.onApproveAttendance,
   }) : attendanceRecords = attendanceRecords ?? _defaultDummyAttendanceRecords;
 
@@ -224,6 +237,9 @@ class TeacherAttendanceScreen extends StatefulWidget {
   /// Jika true, tampilkan tombol Setujui / Tolak (khusus Pembimbing IDUKA).
   final bool isIduka;
   final String? idukaName;
+  final String teacherName;
+  final String teacherPhone;
+  final String teacherEmail;
 
   /// Callback: (studentAccountId, recordDate, approve)
   final void Function(
@@ -285,6 +301,127 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     widget.onApproveAttendance?.call(studentAccountId, recordDate, approve);
   }
 
+  void _showContactOptions(
+    BuildContext context, {
+    required String name,
+    required String roleTitle,
+    required String phone,
+    required String email,
+  }) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.line,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: AppColors.cream,
+                    child: Text(
+                      name.isEmpty ? '?' : name[0].toUpperCase(),
+                      style: const TextStyle(
+                        color: AppColors.maroon,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          roleTitle,
+                          style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                tileColor: AppColors.paper,
+                leading: const CircleAvatar(
+                  backgroundColor: AppColors.green,
+                  radius: 18,
+                  child: Icon(Icons.chat_rounded, color: Colors.white, size: 18),
+                ),
+                title: const Text('WhatsApp / Chat', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                subtitle: Text(phone, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.muted),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Menghubungkan ke WhatsApp: $phone'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                tileColor: AppColors.paper,
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFF2E6B8B),
+                  radius: 18,
+                  child: Icon(Icons.mail_rounded, color: Colors.white, size: 18),
+                ),
+                title: const Text('Kirim Email', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                subtitle: Text(email, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.muted),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Membuka email ke: $email'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showDetail(
     BuildContext context,
     PklUser student,
@@ -299,6 +436,9 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
         record: record,
         isIduka: widget.isIduka,
         idukaName: widget.idukaName,
+        teacherName: widget.teacherName,
+        teacherPhone: widget.teacherPhone,
+        teacherEmail: widget.teacherEmail,
         onApprove: (approve) {
           _handleApprove(student.accountId, record.date, approve);
           Navigator.pop(sheetContext);
@@ -446,6 +586,38 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                                 ],
                               ),
                             ),
+                            if (widget.isIduka) ...[
+                              IconButton(
+                                onPressed: () => _showContactOptions(
+                                  context,
+                                  name: student.name,
+                                  roleTitle: 'Murid PKL (NISN ${student.accountId})',
+                                  phone: student.phoneNumber ?? '085712345678',
+                                  email: student.email ?? '${student.name.toLowerCase().replaceAll(' ', '')}@siswa.smkn1jakarta.sch.id',
+                                ),
+                                tooltip: 'Hubungi Murid',
+                                icon: const Icon(
+                                  Icons.chat_bubble_outline_rounded,
+                                  size: 18,
+                                  color: AppColors.maroon,
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () => _showContactOptions(
+                                  context,
+                                  name: widget.teacherName,
+                                  roleTitle: 'Guru Pembimbing Sekolah',
+                                  phone: widget.teacherPhone,
+                                  email: widget.teacherEmail,
+                                ),
+                                tooltip: 'Hubungi Guru Pembimbing',
+                                icon: const Icon(
+                                  Icons.person_pin_outlined,
+                                  size: 18,
+                                  color: AppColors.green,
+                                ),
+                              ),
+                            ],
                             InfoPill(
                               label: '${records.length} hari',
                               color: AppColors.paleGreen,
@@ -588,6 +760,9 @@ class _AttendanceDetailSheet extends StatelessWidget {
     required this.record,
     this.isIduka = false,
     this.idukaName,
+    this.teacherName = 'Budi Santoso, M.Pd.',
+    this.teacherPhone = '081234567891',
+    this.teacherEmail = 'budisantoso@guru.smkn1jakarta.sch.id',
     this.onApprove,
   });
 
@@ -595,6 +770,9 @@ class _AttendanceDetailSheet extends StatelessWidget {
   final AttendanceRecord record;
   final bool isIduka;
   final String? idukaName;
+  final String teacherName;
+  final String teacherPhone;
+  final String teacherEmail;
   final void Function(bool approve)? onApprove;
 
   Widget _infoRow(IconData icon, Color color, String label, String value) {
