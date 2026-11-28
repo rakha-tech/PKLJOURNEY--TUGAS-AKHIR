@@ -12,6 +12,7 @@ class AttendanceRecord {
     this.checkIn,
     this.checkOut,
     this.checkInPhoto,
+    this.checkOutPhoto,
     this.approvedBy,
     this.approvedAt,
     this.rejectionNote,
@@ -24,6 +25,7 @@ class AttendanceRecord {
   final DateTime? checkIn;
   final DateTime? checkOut;
   final String? checkInPhoto;
+  final String? checkOutPhoto;
   final String? approvedBy;
   final DateTime? approvedAt;
   final String? rejectionNote;
@@ -47,6 +49,7 @@ class AttendanceRecord {
           ? DateTime.parse(map['check_out'] as String).toLocal()
           : null,
       checkInPhoto: map['check_in_photo'] as String?,
+      checkOutPhoto: map['check_out_photo'] as String?,
       approvedBy: map['approved_by'] as String?,
       approvedAt: map['approved_at'] != null
           ? DateTime.parse(map['approved_at'] as String).toLocal()

@@ -63,18 +63,14 @@ class AttendanceService {
         .from('attendances')
         .update({
           'check_out': DateTime.now().toUtc().toIso8601String(),
+          'check_out_photo': photoUrl,
         })
         .eq('user_id', userId)
         .eq('attendance_date', todayDate)
         .select()
         .single();
 
-    // Simpan URL foto pulang sebagai metadata lokal (tidak ada kolom di DB)
-    // Kembalikan record + simpan photoUrl untuk ditampilkan di UI
-    return AttendanceRecord.fromMap({
-      ...data,
-      '_checkout_photo': photoUrl, // key extra untuk UI saja
-    });
+    return AttendanceRecord.fromMap(data);
   }
 
   /// Ambil record presensi hari ini milik user yang login.

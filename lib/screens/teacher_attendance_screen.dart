@@ -376,7 +376,17 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                             imageUrl: rec.checkInPhoto!,
                             height: 130,
                             caption:
-                                'Foto Presensi: ${item.student.fullName} (${rec.shortDate})',
+                                'Foto Masuk: ${item.student.fullName} (${rec.shortDate})',
+                          ),
+                        ],
+                        if (rec.checkOutPhoto != null &&
+                            rec.checkOutPhoto!.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          PklPhotoThumbnail(
+                            imageUrl: rec.checkOutPhoto!,
+                            height: 130,
+                            caption:
+                                'Foto Pulang: ${item.student.fullName} (${rec.shortDate})',
                           ),
                         ],
                         if (rec.status == ApprovalStatus.rejected &&

@@ -743,21 +743,34 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: AppColors.line),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.logout_rounded,
-                          size: 16, color: AppColors.maroon),
-                      const SizedBox(width: 6),
-                      const Text('Waktu Pulang: ',
-                          style: TextStyle(
-                              fontSize: 12, color: AppColors.muted)),
-                      Text(
-                        record.checkOut != null
-                            ? '${_formatTime(record.checkOut)} WIB'
-                            : 'Belum presensi pulang',
-                        style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w800),
+                      Row(
+                        children: [
+                          const Icon(Icons.logout_rounded,
+                              size: 16, color: AppColors.maroon),
+                          const SizedBox(width: 6),
+                          const Text('Waktu Pulang: ',
+                              style: TextStyle(
+                                  fontSize: 12, color: AppColors.muted)),
+                          Text(
+                            record.checkOut != null
+                                ? '${_formatTime(record.checkOut)} WIB'
+                                : 'Belum presensi pulang',
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w800),
+                          ),
+                        ],
                       ),
+                      if (record.checkOutPhoto != null) ...[
+                        const SizedBox(height: 10),
+                        PklPhotoThumbnail(
+                          imageUrl: record.checkOutPhoto!,
+                          height: 130,
+                          caption: 'Foto Bukti Presensi Pulang',
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -801,6 +814,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     // Foto yang ditampilkan di banner
     final bannerPhoto = _previewCheckOutPath ??
+        _todayRecord?.checkOutPhoto ??
         _previewCheckInPath ??
         _todayRecord?.checkInPhoto;
 
