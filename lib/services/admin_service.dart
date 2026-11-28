@@ -87,31 +87,40 @@ class AdminService {
     required AppRole role,
     String? phone,
   }) async {
-    final response = await _client.functions.invoke(
-      'create-user',
-      body: {
-        'email': email,
-        'password': password,
-        'full_name': fullName,
-        'username': username,
-        'role_name': role.name,
-        if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
-      },
-    );
+    try {
+      final response = await _client.functions.invoke(
+        'create-user',
+        body: {
+          'email': email,
+          'password': password,
+          'full_name': fullName,
+          'username': username,
+          'role_name': role.name,
+          if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+        },
+      );
 
-    final data = response.data;
-    if (response.status >= 400 || data == null) {
-      final msg = data is Map && data['error'] != null
-          ? data['error'].toString()
-          : 'Gagal membuat akun (status ${response.status}).';
-      throw Exception(msg);
+      final data = response.data;
+      if (response.status >= 400 || data == null) {
+        final msg = data is Map && data['error'] != null
+            ? data['error'].toString()
+            : 'Gagal membuat akun (status ${response.status}).';
+        throw Exception(msg);
+      }
+
+      if (data is Map<String, dynamic> &&
+          data['user'] is Map<String, dynamic>) {
+        return AppUser.fromMap(data['user'] as Map<String, dynamic>);
+      }
+
+      throw Exception('Respons server tidak valid saat membuat akun.');
+    } on FunctionException catch (e) {
+      final details = e.details;
+      if (details is Map && details['error'] != null) {
+        throw Exception(details['error'].toString());
+      }
+      throw Exception(e.reasonPhrase ?? 'Gagal menghubungi server.');
     }
-
-    if (data is Map<String, dynamic> && data['user'] is Map<String, dynamic>) {
-      return AppUser.fromMap(data['user'] as Map<String, dynamic>);
-    }
-
-    throw Exception('Respons server tidak valid saat membuat akun.');
   }
 
   // ─── Placements & Assign Students ─────────────────────────────────────────
@@ -157,24 +166,18 @@ class AdminService {
   }) async {
     final data = await _client
         .from('assign_students')
-        .upsert(
-          {
-            'student_id': studentId,
-            'teacher_id': teacherId,
-            'mentor_id': mentorId,
-            'placement_id': placementId,
-          },
-          onConflict: 'student_id',
-        )
+        .upsert({
+          'student_id': studentId,
+          'teacher_id': teacherId,
+          'mentor_id': mentorId,
+          'placement_id': placementId,
+        }, onConflict: 'student_id')
         .select()
         .single();
     return StudentAssignment.fromMap(data);
   }
 
   Future<void> deleteAssignment(String studentId) async {
-    await _client
-        .from('assign_students')
-        .delete()
-        .eq('student_id', studentId);
+    await _client.from('assign_students').delete().eq('student_id', studentId);
   }
 }
