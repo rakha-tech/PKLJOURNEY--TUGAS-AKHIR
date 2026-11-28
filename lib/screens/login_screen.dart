@@ -148,23 +148,23 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 24),
 
-                              const _FieldLabel('EMAIL'),
+                              const _FieldLabel('USERNAME / NIP / NISN'),
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: _emailController,
-                                keyboardType: TextInputType.emailAddress,
+                                keyboardType: TextInputType.text,
                                 textInputAction: TextInputAction.next,
                                 autocorrect: false,
                                 decoration: const InputDecoration(
-                                  hintText: 'Masukkan email akunmu',
-                                  prefixIcon: Icon(Icons.email_outlined),
+                                  hintText: 'Masukkan username, NIP, atau NISN',
+                                  prefixIcon: Icon(Icons.person_outline_rounded),
                                 ),
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
-                                    return 'Masukkan email';
+                                    return 'Masukkan username, NIP, atau NISN';
                                   }
-                                  if (!value.contains('@')) {
-                                    return 'Format email tidak valid';
+                                  if (value.trim().contains(' ')) {
+                                    return 'Username tidak boleh mengandung spasi';
                                   }
                                   return null;
                                 },

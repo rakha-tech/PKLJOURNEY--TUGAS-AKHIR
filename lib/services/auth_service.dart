@@ -7,13 +7,18 @@ import '../models/app_user.dart';
 class AuthService {
   final _client = Supabase.instance.client;
 
-  /// Login dengan email & password, lalu fetch profil dari tabel users.
+  /// Login dengan username (otomatis dipetakan ke `@pkljourney.sch.id`) atau email & password.
   Future<AppUser> signIn({
     required String email,
     required String password,
   }) async {
+    final normalized = email.trim().toLowerCase();
+    final resolvedEmail = normalized.contains('@')
+        ? normalized
+        : '$normalized@pkljourney.sch.id';
+
     final response = await _client.auth.signInWithPassword(
-      email: email,
+      email: resolvedEmail,
       password: password,
     );
     final authUser = response.user;
