@@ -358,7 +358,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const _ProfileDetail(
             icon: Icons.school_outlined,
             label: 'Sekolah',
-            value: 'SMK Negeri 1 Jakarta',
+            value: 'SMK Negeri 8 Malang',
           ),
           const _ProfileDetail(
             icon: Icons.work_outline_rounded,
@@ -407,7 +407,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const _ProfileDetail(
             icon: Icons.school_outlined,
             label: 'Sekolah',
-            value: 'SMK Negeri 1 Jakarta',
+            value: 'SMK Negeri 8 Malang',
           ),
         ],
     };

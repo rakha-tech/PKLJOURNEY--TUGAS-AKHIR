@@ -1,253 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../models/attendance_record.dart';
+import '../services/teacher_mentor_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
 
-// Model pendukung & Data Dummy lokal
-enum UserRole {
-  admin,
-  guru,
-  iduka,
-  murid;
-
-  String get label => switch (this) {
-        UserRole.admin => 'Admin',
-        UserRole.guru => 'Guru',
-        UserRole.iduka => 'IDUKA',
-        UserRole.murid => 'Murid',
-      };
-}
-
-class PklUser {
-  const PklUser({
-    required this.accountId,
-    required this.name,
-    required this.role,
-    this.username = '',
-    this.mentorAccountId,
-    this.companyName,
-    this.address,
-    this.phoneNumber,
-    this.email,
-  });
-
-  final String accountId;
-  final String name;
-  final UserRole role;
-  final String username;
-  final String? mentorAccountId;
-  final String? companyName;
-  final String? address;
-  final String? phoneNumber;
-  final String? email;
-}
-
-class AttendanceRecord {
-  const AttendanceRecord({
-    required this.date,
-    this.checkInTime,
-    this.checkOutTime,
-    this.checkInPhoto,
-    this.checkOutPhoto,
-    this.isApprovedByIduka = false,
-    this.idukaApproverName,
-    this.idukaApprovalTime,
-  });
-
-  final DateTime date;
-  final String? checkInTime;
-  final String? checkOutTime;
-  final String? checkInPhoto;
-  final String? checkOutPhoto;
-  final bool isApprovedByIduka;
-  final String? idukaApproverName;
-  final String? idukaApprovalTime;
-
-  AttendanceRecord copyWith({
-    DateTime? date,
-    String? checkInTime,
-    String? checkOutTime,
-    String? checkInPhoto,
-    String? checkOutPhoto,
-    bool? isApprovedByIduka,
-    String? idukaApproverName,
-    String? idukaApprovalTime,
-  }) {
-    return AttendanceRecord(
-      date: date ?? this.date,
-      checkInTime: checkInTime ?? this.checkInTime,
-      checkOutTime: checkOutTime ?? this.checkOutTime,
-      checkInPhoto: checkInPhoto ?? this.checkInPhoto,
-      checkOutPhoto: checkOutPhoto ?? this.checkOutPhoto,
-      isApprovedByIduka: isApprovedByIduka ?? this.isApprovedByIduka,
-      idukaApproverName: idukaApproverName ?? this.idukaApproverName,
-      idukaApprovalTime: idukaApprovalTime ?? this.idukaApprovalTime,
-    );
-  }
-
-  String get shortWeekday {
-    const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-    return days[date.weekday - 1];
-  }
-
-  String get shortDate {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'Mei',
-      'Jun',
-      'Jul',
-      'Agu',
-      'Sep',
-      'Okt',
-      'Nov',
-      'Des'
-    ];
-    return '${date.day} ${months[date.month - 1]}';
-  }
-
-  String get approvalStatusLabel =>
-      isApprovedByIduka ? 'Disetujui IDUKA' : 'Menunggu Persetujuan';
-}
-
-final Map<String, List<AttendanceRecord>> _defaultDummyAttendanceRecords = {
-  '0054321980': [
-    AttendanceRecord(
-      date: DateTime(2026, 11, 26),
-      checkInTime: '07.45',
-      checkOutTime: '16.05',
-      checkInPhoto: PklPhotoPresets.coding,
-      checkOutPhoto: PklPhotoPresets.meeting,
-      isApprovedByIduka: true,
-      idukaApproverName: 'Hendro Prasetyo, S.T.',
-      idukaApprovalTime: '16.10 WIB',
-    ),
-    AttendanceRecord(
-      date: DateTime(2026, 11, 25),
-      checkInTime: '07.50',
-      checkOutTime: '16.00',
-      checkInPhoto: PklPhotoPresets.uiDesign,
-      checkOutPhoto: PklPhotoPresets.report,
-      isApprovedByIduka: true,
-      idukaApproverName: 'Hendro Prasetyo, S.T.',
-      idukaApprovalTime: '16.15 WIB',
-    ),
-    AttendanceRecord(
-      date: DateTime(2026, 11, 24),
-      checkInTime: '07.55',
-      checkOutTime: '16.10',
-      checkInPhoto: PklPhotoPresets.networking,
-      checkOutPhoto: PklPhotoPresets.coding,
-      isApprovedByIduka: false,
-    ),
-  ],
-  '0054321981': [
-    AttendanceRecord(
-      date: DateTime(2026, 11, 26),
-      checkInTime: '07.40',
-      checkOutTime: '16.00',
-      checkInPhoto: PklPhotoPresets.uiDesign,
-      checkOutPhoto: PklPhotoPresets.meeting,
-      isApprovedByIduka: true,
-      idukaApproverName: 'Hendro Prasetyo, S.T.',
-      idukaApprovalTime: '16.05 WIB',
-    ),
-    AttendanceRecord(
-      date: DateTime(2026, 11, 25),
-      checkInTime: '07.45',
-      checkOutTime: null,
-      checkInPhoto: PklPhotoPresets.coding,
-      isApprovedByIduka: false,
-    ),
-  ],
-  '0054321982': [
-    AttendanceRecord(
-      date: DateTime(2026, 11, 26),
-      checkInTime: '07.58',
-      checkOutTime: null,
-      checkInPhoto: PklPhotoPresets.report,
-      isApprovedByIduka: false,
-    ),
-  ],
-  '0054321983': [
-    AttendanceRecord(
-      date: DateTime(2026, 11, 26),
-      checkInTime: '07.30',
-      checkOutTime: '16.30',
-      checkInPhoto: PklPhotoPresets.networking,
-      checkOutPhoto: PklPhotoPresets.coding,
-      isApprovedByIduka: true,
-      idukaApproverName: 'Hendro Prasetyo, S.T.',
-      idukaApprovalTime: '16.35 WIB',
-    ),
-  ],
-};
-
 class TeacherAttendanceScreen extends StatefulWidget {
-  TeacherAttendanceScreen({
+  const TeacherAttendanceScreen({
     super.key,
-    this.students = const [
-      PklUser(
-        accountId: '0054321980',
-        name: 'Ahmad Fauzi',
-        role: UserRole.murid,
-        mentorAccountId: '19820109940201',
-        phoneNumber: '085712345678',
-        email: 'ahmadfauzi@siswa.smkn1jakarta.sch.id',
-      ),
-      PklUser(
-        accountId: '0054321981',
-        name: 'Siti Nurhaliza',
-        role: UserRole.murid,
-        mentorAccountId: '19820109940201',
-        phoneNumber: '085712345679',
-        email: 'sitinurhaliza@siswa.smkn1jakarta.sch.id',
-      ),
-      PklUser(
-        accountId: '0054321982',
-        name: 'Dimas Anggara',
-        role: UserRole.murid,
-        mentorAccountId: '19820109940201',
-        phoneNumber: '085712345680',
-        email: 'dimasanggara@siswa.smkn1jakarta.sch.id',
-      ),
-      PklUser(
-        accountId: '0054321983',
-        name: 'Rizky Pratama',
-        role: UserRole.murid,
-        mentorAccountId: '19820109940201',
-        phoneNumber: '085712345681',
-        email: 'rizkypratama@siswa.smkn1jakarta.sch.id',
-      ),
-    ],
-    Map<String, List<AttendanceRecord>>? attendanceRecords,
     this.isIduka = false,
-    this.idukaName = 'Hendro Prasetyo, S.T.',
-    this.teacherName = 'Budi Santoso, M.Pd.',
-    this.teacherPhone = '081234567891',
-    this.teacherEmail = 'budisantoso@guru.smkn1jakarta.sch.id',
-    this.onApproveAttendance,
-  }) : attendanceRecords = attendanceRecords ?? _defaultDummyAttendanceRecords;
+    this.idukaName = 'Pembimbing IDUKA',
+  });
 
-  final List<PklUser> students;
-  final Map<String, List<AttendanceRecord>> attendanceRecords;
-
-  /// Jika true, tampilkan tombol Setujui / Tolak (khusus Pembimbing IDUKA).
   final bool isIduka;
-  final String? idukaName;
-  final String teacherName;
-  final String teacherPhone;
-  final String teacherEmail;
-
-  /// Callback: (studentAccountId, recordDate, approve)
-  final void Function(
-    String studentAccountId,
-    DateTime recordDate,
-    bool approve,
-  )?
-  onApproveAttendance;
+  final String idukaName;
 
   @override
   State<TeacherAttendanceScreen> createState() =>
@@ -255,496 +21,417 @@ class TeacherAttendanceScreen extends StatefulWidget {
 }
 
 class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
-  late Map<String, List<AttendanceRecord>> _records;
+  final _service = TeacherMentorService();
+
+  bool _isLoading = true;
+  List<StudentAttendanceItem> _items = [];
+  String _filter = 'Semua';
 
   @override
   void initState() {
     super.initState();
-    _records = {
-      for (final entry in widget.attendanceRecords.entries)
-        entry.key: List.from(entry.value),
-    };
+    _loadAttendances();
   }
 
-  @override
-  void didUpdateWidget(covariant TeacherAttendanceScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.attendanceRecords != oldWidget.attendanceRecords) {
-      _records = {
-        for (final entry in widget.attendanceRecords.entries)
-          entry.key: List.from(entry.value),
-      };
+  Future<void> _loadAttendances() async {
+    setState(() => _isLoading = true);
+    try {
+      final list = await _service.fetchStudentsAttendances();
+      if (mounted) {
+        setState(() {
+          _items = list;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat presensi siswa: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
-  void _handleApprove(String studentAccountId, DateTime recordDate, bool approve) {
-    setState(() {
-      final studentList = _records[studentAccountId];
-      if (studentList != null) {
-        final idx = studentList.indexWhere((r) =>
-            r.date.year == recordDate.year &&
-            r.date.month == recordDate.month &&
-            r.date.day == recordDate.day);
+  String _formatTime(DateTime? t) {
+    if (t == null) return '--.--';
+    return '${t.hour.toString().padLeft(2, '0')}.${t.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _approve(StudentAttendanceItem item) async {
+    try {
+      final updated = await _service.approveAttendance(item.record.attendanceId);
+      if (!mounted) return;
+      setState(() {
+        final idx = _items.indexWhere(
+          (i) => i.record.attendanceId == updated.attendanceId,
+        );
         if (idx != -1) {
-          final now = DateTime.now();
-          final timeStr =
-              '${now.hour.toString().padLeft(2, '0')}.${now.minute.toString().padLeft(2, '0')} WIB';
-          studentList[idx] = studentList[idx].copyWith(
-            isApprovedByIduka: approve,
-            idukaApproverName: approve ? (widget.idukaName ?? 'Pembimbing IDUKA') : null,
-            idukaApprovalTime: approve ? timeStr : null,
+          _items[idx] = StudentAttendanceItem(
+            record: updated,
+            student: item.student,
+            companyName: item.companyName,
           );
         }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Presensi ${item.student.fullName} disetujui.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.green,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyetujui presensi: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.maroon,
+          ),
+        );
       }
-    });
-
-    widget.onApproveAttendance?.call(studentAccountId, recordDate, approve);
+    }
   }
 
-  void _showContactOptions(
-    BuildContext context, {
-    required String name,
-    required String roleTitle,
-    required String phone,
-    required String email,
-  }) {
-    showModalBottomSheet<void>(
+  Future<void> _reject(StudentAttendanceItem item) async {
+    final noteCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final note = await showDialog<String>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => Container(
-        padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.line,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: AppColors.cream,
-                    child: Text(
-                      name.isEmpty ? '?' : name[0].toUpperCase(),
-                      style: const TextStyle(
-                        color: AppColors.maroon,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.ink,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          roleTitle,
-                          style: const TextStyle(fontSize: 11, color: AppColors.muted),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                tileColor: AppColors.paper,
-                leading: const CircleAvatar(
-                  backgroundColor: AppColors.green,
-                  radius: 18,
-                  child: Icon(Icons.chat_rounded, color: Colors.white, size: 18),
-                ),
-                title: const Text('WhatsApp / Chat', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                subtitle: Text(phone, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
-                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.muted),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Menghubungkan ke WhatsApp: $phone'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                tileColor: AppColors.paper,
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFF2E6B8B),
-                  radius: 18,
-                  child: Icon(Icons.mail_rounded, color: Colors.white, size: 18),
-                ),
-                title: const Text('Kirim Email', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                subtitle: Text(email, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
-                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.muted),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Membuka email ke: $email'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-              ),
-            ],
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Tolak Presensi'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: noteCtrl,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Alasan penolakan',
+              hintText: 'Contoh: Foto tidak sesuai lokasi PKL',
+            ),
+            validator: (v) => v == null || v.trim().isEmpty
+                ? 'Alasan penolakan wajib diisi'
+                : null,
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.maroon),
+            onPressed: () {
+              if (!formKey.currentState!.validate()) return;
+              Navigator.pop(dialogCtx, noteCtrl.text.trim());
+            },
+            child: const Text('Tolak'),
+          ),
+        ],
       ),
     );
-  }
+    noteCtrl.dispose();
 
-  void _showDetail(
-    BuildContext context,
-    PklUser student,
-    AttendanceRecord record,
-  ) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => _AttendanceDetailSheet(
-        student: student,
-        record: record,
-        isIduka: widget.isIduka,
-        idukaName: widget.idukaName,
-        teacherName: widget.teacherName,
-        teacherPhone: widget.teacherPhone,
-        teacherEmail: widget.teacherEmail,
-        onApprove: (approve) {
-          _handleApprove(student.accountId, record.date, approve);
-          Navigator.pop(sheetContext);
-        },
-      ),
-    );
+    if (note == null || !mounted) return;
+
+    try {
+      final updated = await _service.rejectAttendance(
+        item.record.attendanceId,
+        note: note,
+      );
+      if (!mounted) return;
+      setState(() {
+        final idx = _items.indexWhere(
+          (i) => i.record.attendanceId == updated.attendanceId,
+        );
+        if (idx != -1) {
+          _items[idx] = StudentAttendanceItem(
+            record: updated,
+            student: item.student,
+            companyName: item.companyName,
+          );
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Presensi ${item.student.fullName} ditolak.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menolak presensi: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.maroon,
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final pendingCount =
+        _items.where((i) => i.record.status == ApprovalStatus.pending).length;
+    final approvedCount =
+        _items.where((i) => i.record.status == ApprovalStatus.approved).length;
+    final rejectedCount =
+        _items.where((i) => i.record.status == ApprovalStatus.rejected).length;
+
+    final filtered = _items.where((i) {
+      return switch (_filter) {
+        'Menunggu' => i.record.status == ApprovalStatus.pending,
+        'Disetujui' => i.record.status == ApprovalStatus.approved,
+        'Ditolak' => i.record.status == ApprovalStatus.rejected,
+        _ => true,
+      };
+    }).toList();
+
     return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-        children: [
-          PageHeading(
-            title: widget.isIduka ? 'Konfirmasi Presensi' : 'Riwayat kehadiran',
-            subtitle: widget.isIduka
-                ? 'Setujui atau tolak presensi siswa PKL di perusahaan Anda.'
-                : 'Presensi murid yang menjadi tanggung jawab Anda.',
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                InfoPill(
-                  label: '${widget.students.length} murid',
-                  color: AppColors.cream,
-                  textColor: AppColors.maroon,
-                  icon: Icons.groups_2_outlined,
-                ),
-                if (widget.isIduka) ...[
-                  const SizedBox(width: 6),
-                  const PklNotificationButton(unreadCount: 2),
-                ],
-              ],
+      child: RefreshIndicator(
+        onRefresh: _loadAttendances,
+        color: AppColors.maroon,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          children: [
+            PageHeading(
+              title: widget.isIduka ? 'Persetujuan Presensi' : 'Presensi Murid',
+              subtitle: widget.isIduka
+                  ? 'Verifikasi kehadiran harian siswa PKL (${widget.idukaName}).'
+                  : 'Pantau catatan kehadiran dan status persetujuan IDUKA.',
             ),
-          ),
-          if (widget.isIduka)
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.paleAmber,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.cream),
-              ),
-              child: const Row(
+
+            // Filter Pills
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
                 children: [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    color: AppColors.amber,
-                    size: 20,
+                  _FilterTab(
+                    label: 'Semua (${_items.length})',
+                    selected: _filter == 'Semua',
+                    onTap: () => setState(() => _filter = 'Semua'),
                   ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Ketuk baris presensi untuk melihat detail dan memberikan konfirmasi kehadiran.',
-                      style: TextStyle(
-                        color: AppColors.taupe,
-                        fontSize: 11,
-                        height: 1.45,
-                      ),
-                    ),
+                  const SizedBox(width: 8),
+                  _FilterTab(
+                    label: 'Menunggu ($pendingCount)',
+                    selected: _filter == 'Menunggu',
+                    onTap: () => setState(() => _filter = 'Menunggu'),
+                  ),
+                  const SizedBox(width: 8),
+                  _FilterTab(
+                    label: 'Disetujui ($approvedCount)',
+                    selected: _filter == 'Disetujui',
+                    onTap: () => setState(() => _filter = 'Disetujui'),
+                  ),
+                  const SizedBox(width: 8),
+                  _FilterTab(
+                    label: 'Ditolak ($rejectedCount)',
+                    selected: _filter == 'Ditolak',
+                    onTap: () => setState(() => _filter = 'Ditolak'),
                   ),
                 ],
               ),
             ),
-          if (widget.students.isEmpty)
-            const WhiteCard(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
+
+            const SizedBox(height: 20),
+            SectionLabel(
+              'Daftar presensi',
+              action: '${filtered.length} catatan',
+            ),
+
+            if (_isLoading && _items.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.maroon),
+                ),
+              )
+            else if (filtered.isEmpty)
+              const WhiteCard(
                 child: Column(
                   children: [
                     Icon(
                       Icons.fact_check_outlined,
-                      color: AppColors.maroon,
+                      color: AppColors.muted,
                       size: 38,
                     ),
-                    SizedBox(height: 11),
+                    SizedBox(height: 10),
                     Text(
-                      'Belum ada murid bimbingan',
-                      style: TextStyle(
-                        color: AppColors.ink,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      'Belum ada data presensi',
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    SizedBox(height: 5),
+                    SizedBox(height: 6),
                     Text(
-                      'Tambahkan atau tautkan murid terlebih dahulu untuk melihat riwayat kehadirannya.',
+                      'Belum ada siswa bimbingan yang mencatat presensi.',
                       textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.muted, fontSize: 12),
                     ),
                   ],
                 ),
-              ),
-            )
-          else
-            ...widget.students.map((student) {
-              final records = List<AttendanceRecord>.of(
-                _records[student.accountId] ?? const [],
-              )..sort((a, b) => b.date.compareTo(a.date));
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: WhiteCard(
-                  padding: 0,
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(15, 15, 15, 13),
-                        child: Row(
+              )
+            else
+              ...filtered.map((item) {
+                final rec = item.record;
+                final (pillBg, pillText) = switch (rec.status) {
+                  ApprovalStatus.approved => (
+                      AppColors.paleGreen,
+                      AppColors.green,
+                    ),
+                  ApprovalStatus.rejected => (
+                      const Color(0xFFFDE8E8),
+                      Colors.red.shade700,
+                    ),
+                  ApprovalStatus.pending => (
+                      AppColors.paleAmber,
+                      AppColors.amber,
+                    ),
+                };
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: WhiteCard(
+                    padding: 15,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            CircleAvatar(
-                              radius: 20,
-                              backgroundColor: AppColors.cream,
-                              child: Text(
-                                student.name.isEmpty
-                                    ? '?'
-                                    : student.name[0].toUpperCase(),
-                                style: const TextStyle(
-                                  color: AppColors.maroon,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    student.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                    item.student.fullName,
                                     style: const TextStyle(
                                       color: AppColors.ink,
-                                      fontSize: 12,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  const SizedBox(height: 3),
+                                  const SizedBox(height: 2),
                                   Text(
-                                    'NISN ${student.accountId}',
+                                    '${rec.shortWeekday}, ${rec.shortDate} • ${item.companyName}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       color: AppColors.muted,
-                                      fontSize: 10,
+                                      fontSize: 11,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            if (widget.isIduka) ...[
-                              IconButton(
-                                onPressed: () => _showContactOptions(
-                                  context,
-                                  name: student.name,
-                                  roleTitle: 'Murid PKL (NISN ${student.accountId})',
-                                  phone: student.phoneNumber ?? '085712345678',
-                                  email: student.email ?? '${student.name.toLowerCase().replaceAll(' ', '')}@siswa.smkn1jakarta.sch.id',
-                                ),
-                                tooltip: 'Hubungi Murid',
-                                icon: const Icon(
-                                  Icons.chat_bubble_outline_rounded,
-                                  size: 18,
-                                  color: AppColors.maroon,
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () => _showContactOptions(
-                                  context,
-                                  name: widget.teacherName,
-                                  roleTitle: 'Guru Pembimbing Sekolah',
-                                  phone: widget.teacherPhone,
-                                  email: widget.teacherEmail,
-                                ),
-                                tooltip: 'Hubungi Guru Pembimbing',
-                                icon: const Icon(
-                                  Icons.person_pin_outlined,
-                                  size: 18,
-                                  color: AppColors.green,
-                                ),
-                              ),
-                            ],
                             InfoPill(
-                              label: '${records.length} hari',
-                              color: AppColors.paleGreen,
-                              textColor: AppColors.green,
-                              icon: Icons.calendar_month_outlined,
+                              label: rec.statusLabel,
+                              color: pillBg,
+                              textColor: pillText,
                             ),
                           ],
                         ),
-                      ),
-                      const Divider(height: 1, indent: 15, endIndent: 15),
-                      if (records.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.all(15),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              'Belum ada riwayat presensi.',
-                              style: TextStyle(
-                                color: AppColors.muted,
-                                fontSize: 11,
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.paper,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Masuk: ${_formatTime(rec.checkIn)} WIB',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.ink,
+                                  ),
+                                ),
                               ),
+                              Expanded(
+                                child: Text(
+                                  'Pulang: ${_formatTime(rec.checkOut)} WIB',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.ink,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (rec.checkInPhoto != null &&
+                            rec.checkInPhoto!.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          PklPhotoThumbnail(
+                            imageUrl: rec.checkInPhoto!,
+                            height: 130,
+                            caption:
+                                'Foto Presensi: ${item.student.fullName} (${rec.shortDate})',
+                          ),
+                        ],
+                        if (rec.status == ApprovalStatus.rejected &&
+                            rec.rejectionNote != null &&
+                            rec.rejectionNote!.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            'Catatan penolakan: ${rec.rejectionNote}',
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        )
-                      else
-                        ...records
-                            .take(10)
-                            .map(
-                              (record) => _StudentAttendanceRow(
-                                record: record,
-                                isIduka: widget.isIduka,
-                                onTap: () =>
-                                    _showDetail(context, student, record),
+                        ],
+                        if (widget.isIduka &&
+                            rec.status == ApprovalStatus.pending) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => _reject(item),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.red.shade700,
+                                    side: BorderSide(
+                                      color: Colors.red.shade200,
+                                    ),
+                                  ),
+                                  child: const Text('Tolak'),
+                                ),
                               ),
-                            ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Row ───────────────────────────────────────────────────────────────────────
-
-class _StudentAttendanceRow extends StatelessWidget {
-  const _StudentAttendanceRow({
-    required this.record,
-    required this.onTap,
-    this.isIduka = false,
-  });
-
-  final AttendanceRecord record;
-  final VoidCallback onTap;
-  final bool isIduka;
-
-  @override
-  Widget build(BuildContext context) {
-    final isComplete =
-        record.checkInTime != null && record.checkOutTime != null;
-
-    Color statusColor;
-    IconData statusIcon;
-    if (isIduka) {
-      if (record.isApprovedByIduka) {
-        statusColor = AppColors.green;
-        statusIcon = Icons.verified_rounded;
-      } else {
-        statusColor = AppColors.amber;
-        statusIcon = Icons.pending_actions_rounded;
-      }
-    } else {
-      statusColor = isComplete ? AppColors.green : AppColors.amber;
-      statusIcon = isComplete
-          ? Icons.check_circle_rounded
-          : Icons.schedule_rounded;
-    }
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(0),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 72,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    record.shortWeekday,
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
+                              const SizedBox(width: 10),
+                              Expanded(
+                                flex: 2,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _approve(item),
+                                  icon: const Icon(
+                                    Icons.check_rounded,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Setujui Presensi'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.green,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    record.shortDate,
-                    style: const TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Spacer(),
-            _AttendanceTime(label: 'Masuk', value: record.checkInTime),
-            const SizedBox(width: 16),
-            _AttendanceTime(label: 'Pulang', value: record.checkOutTime),
-            const SizedBox(width: 10),
-            Icon(statusIcon, color: statusColor, size: 17),
-            if (isIduka) ...[
-              const SizedBox(width: 4),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.muted,
-                size: 16,
-              ),
-            ],
+                );
+              }),
           ],
         ),
       ),
@@ -752,335 +439,40 @@ class _StudentAttendanceRow extends StatelessWidget {
   }
 }
 
-// ── Detail Sheet ──────────────────────────────────────────────────────────────
-
-class _AttendanceDetailSheet extends StatelessWidget {
-  const _AttendanceDetailSheet({
-    required this.student,
-    required this.record,
-    this.isIduka = false,
-    this.idukaName,
-    this.teacherName = 'Budi Santoso, M.Pd.',
-    this.teacherPhone = '081234567891',
-    this.teacherEmail = 'budisantoso@guru.smkn1jakarta.sch.id',
-    this.onApprove,
+class _FilterTab extends StatelessWidget {
+  const _FilterTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
   });
 
-  final PklUser student;
-  final AttendanceRecord record;
-  final bool isIduka;
-  final String? idukaName;
-  final String teacherName;
-  final String teacherPhone;
-  final String teacherEmail;
-  final void Function(bool approve)? onApprove;
-
-  Widget _infoRow(IconData icon, Color color, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(color: AppColors.muted, fontSize: 12),
-          ),
-          const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.ink,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Handle
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.line,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-
-              // Header
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppColors.cream,
-                    child: Text(
-                      student.name.isEmpty
-                          ? '?'
-                          : student.name[0].toUpperCase(),
-                      style: const TextStyle(
-                        color: AppColors.maroon,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          student.name,
-                          style: const TextStyle(
-                            color: AppColors.ink,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                          ),
-                        ),
-                        Text(
-                          'NISN ${student.accountId}',
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Status badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: record.isApprovedByIduka
-                          ? AppColors.paleGreen
-                          : AppColors.paleAmber,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      record.isApprovedByIduka ? 'Disetujui' : 'Menunggu',
-                      style: TextStyle(
-                        color: record.isApprovedByIduka
-                            ? AppColors.green
-                            : AppColors.amber,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Info presensi
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.paper,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.line),
-                ),
-                child: Column(
-                  children: [
-                    _infoRow(
-                      Icons.calendar_today_rounded,
-                      AppColors.maroon,
-                      'Tanggal',
-                      '${record.shortWeekday}, ${record.shortDate}',
-                    ),
-                    _infoRow(
-                      Icons.login_rounded,
-                      AppColors.green,
-                      'Jam Masuk',
-                      record.checkInTime != null
-                          ? '${record.checkInTime} WIB'
-                          : '-',
-                    ),
-                    _infoRow(
-                      Icons.logout_rounded,
-                      AppColors.amber,
-                      'Jam Pulang',
-                      record.checkOutTime != null
-                          ? '${record.checkOutTime} WIB'
-                          : 'Belum presensi pulang',
-                    ),
-                    if (record.isApprovedByIduka &&
-                        record.idukaApproverName != null) ...[
-                      const Divider(height: 16),
-                      _infoRow(
-                        Icons.verified_rounded,
-                        AppColors.green,
-                        'Dikonfirmasi oleh',
-                        record.idukaApproverName!,
-                      ),
-                      if (record.idukaApprovalTime != null)
-                        _infoRow(
-                          Icons.access_time_rounded,
-                          AppColors.green,
-                          'Waktu konfirmasi',
-                          record.idukaApprovalTime!,
-                        ),
-                    ],
-                  ],
-                ),
-              ),
-
-              // Foto bukti
-              if (record.checkInPhoto != null) ...[
-                const SizedBox(height: 14),
-                const Text(
-                  'FOTO PRESENSI MASUK',
-                  style: TextStyle(
-                    color: AppColors.taupe,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                PklPhotoThumbnail(
-                  imageUrl: record.checkInPhoto!,
-                  height: 130,
-                  caption: 'Foto Presensi Masuk',
-                ),
-              ],
-              if (record.checkOutPhoto != null) ...[
-                const SizedBox(height: 10),
-                const Text(
-                  'FOTO PRESENSI PULANG',
-                  style: TextStyle(
-                    color: AppColors.taupe,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                PklPhotoThumbnail(
-                  imageUrl: record.checkOutPhoto!,
-                  height: 130,
-                  caption: 'Foto Presensi Pulang',
-                ),
-              ],
-
-              // Tombol aksi (hanya IDUKA)
-              if (isIduka && onApprove != null) ...[
-                const SizedBox(height: 22),
-                if (!record.isApprovedByIduka) ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => onApprove!(false),
-                          icon: const Icon(Icons.cancel_outlined, size: 18),
-                          label: const Text('Tolak'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red.shade700,
-                            side: BorderSide(color: Colors.red.shade300),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton.icon(
-                          onPressed: () => onApprove!(true),
-                          icon: const Icon(Icons.verified_rounded, size: 18),
-                          label: const Text('Setujui Kehadiran'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.green,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ] else ...[
-                  // Sudah disetujui — bisa dibatalkan
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => onApprove!(false),
-                      icon: const Icon(Icons.undo_rounded, size: 18),
-                      label: const Text('Batalkan Persetujuan'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red.shade700,
-                        side: BorderSide(color: Colors.red.shade300),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ] else if (!isIduka) ...[
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Tutup'),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Time Widget ───────────────────────────────────────────────────────────────
-
-class _AttendanceTime extends StatelessWidget {
-  const _AttendanceTime({required this.label, required this.value});
-
   final String label;
-  final String? value;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: AppColors.muted, fontSize: 9),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.maroon : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? AppColors.maroon : AppColors.line,
+          ),
         ),
-        const SizedBox(height: 3),
-        Text(
-          value ?? '--.--',
-          style: const TextStyle(
-            color: AppColors.ink,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : AppColors.ink,
             fontSize: 11,
             fontWeight: FontWeight.w700,
           ),
         ),
-      ],
+      ),
     );
   }
 }

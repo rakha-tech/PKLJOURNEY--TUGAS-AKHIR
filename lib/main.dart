@@ -211,12 +211,13 @@ class _RoleShellState extends State<_RoleShell> {
       case AppRole.guru:
         return [
           teacher_dash.TeacherDashboardScreen(
+            teacherName: widget.user.fullName,
             onOpenStudents: () => _goToTab(1),
             onOpenAttendance: () => _goToTab(2),
             onOpenReviews: () => _goToTab(3),
           ),
           const teacher_students.TeacherStudentsScreen(),
-          teacher_att.TeacherAttendanceScreen(),
+          const teacher_att.TeacherAttendanceScreen(),
           const TeacherReviewsScreen(),
           ProfileScreen(
             user: widget.user,
@@ -230,7 +231,7 @@ class _RoleShellState extends State<_RoleShell> {
             isIduka: true,
             idukaName: widget.user.fullName,
           ),
-          const TeacherReviewsScreen(),
+          const TeacherReviewsScreen(isMentor: true),
           ProfileScreen(
             user: widget.user,
             onLogout: widget.onLogout,

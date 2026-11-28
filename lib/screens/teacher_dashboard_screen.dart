@@ -1,556 +1,324 @@
 import 'package:flutter/material.dart';
 
-// ============================================================
-// DUMMY DATA & MODEL (self-contained)
-// ============================================================
+import '../models/attendance_record.dart';
+import '../services/teacher_mentor_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/app_widgets.dart';
 
-enum UserRole { guru, murid, iduka }
-
-class PklUser {
-  const PklUser({
-    required this.username,
-    required this.password,
-    required this.name,
-    required this.role,
-    required this.accountId,
-    this.mentorAccountId,
-    this.idukaAccountId,
-    this.companyName,
-    this.address,
-    this.phoneNumber,
-    this.school,
-  });
-
-  final String username;
-  final String password;
-  final String name;
-  final UserRole role;
-  final String accountId;
-  final String? mentorAccountId;
-  final String? idukaAccountId;
-  final String? companyName;
-  final String? address;
-  final String? phoneNumber;
-  final String? school;
-}
-
-// ============================================================
-// THEME COLORS (dummy, self-contained)
-// ============================================================
-
-class AppColors {
-  AppColors._();
-
-  static const Color maroon = Color(0xFF7A1F2B);
-  static const Color cream = Color(0xFFF7E9D7);
-  static const Color paleGreen = Color(0xFFDDF3E1);
-  static const Color green = Color(0xFF2E7D32);
-  static const Color amber = Color(0xFFB8860B);
-  static const Color ink = Color(0xFF1F1F1F);
-  static const Color muted = Color(0xFF8A8A8A);
-}
-
-// ============================================================
-// SHARED WIDGETS (dummy, self-contained)
-// ============================================================
-
-class BrandMark extends StatelessWidget {
-  const BrandMark({super.key, this.compact = false});
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: compact ? 30 : 38,
-          height: compact ? 30 : 38,
-          decoration: BoxDecoration(
-            color: AppColors.maroon,
-            borderRadius: BorderRadius.circular(9),
-          ),
-          child: const Icon(Icons.school, color: Colors.white, size: 18),
-        ),
-        if (!compact) ...[
-          const SizedBox(width: 8),
-          const Text(
-            'PKL Journey',
-            style: TextStyle(
-              color: AppColors.ink,
-              fontWeight: FontWeight.w800,
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class InfoPill extends StatelessWidget {
-  const InfoPill({
-    super.key,
-    required this.label,
-    required this.color,
-    required this.textColor,
-    this.icon,
-  });
-
-  final String label;
-  final Color color;
-  final Color textColor;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, color: textColor, size: 11),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            label,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 8.5,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class PklNotificationButton extends StatelessWidget {
-  const PklNotificationButton({super.key, this.unreadCount = 0});
-  final int unreadCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.notifications_none_rounded,
-            color: AppColors.maroon,
-            size: 18,
-          ),
-        ),
-        if (unreadCount > 0)
-          Positioned(
-            top: -2,
-            right: -2,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: AppColors.maroon,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Text(
-                '$unreadCount',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 8,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class SectionLabel extends StatelessWidget {
-  const SectionLabel(this.text, {super.key, this.action, this.onAction});
-  final String text;
-  final String? action;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Text(
-            text,
-            style: const TextStyle(
-              color: AppColors.ink,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const Spacer(),
-          if (action != null)
-            GestureDetector(
-              onTap: onAction,
-              child: Text(
-                action!,
-                style: const TextStyle(
-                  color: AppColors.maroon,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class WhiteCard extends StatelessWidget {
-  const WhiteCard({
-    super.key,
-    required this.child,
-    this.padding = 16,
-  });
-
-  final Widget child;
-  final double padding;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(padding),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: child,
-    );
-  }
-}
-
-// ============================================================
-// MAIN SCREEN
-// ============================================================
-
-class TeacherDashboardScreen extends StatelessWidget {
+class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({
     super.key,
-    this.user,
-    this.users,
-    this.pendingJournalCount,
-    this.onOpenStudents,
-    this.onOpenReviews,
-    this.onOpenAttendance,
+    this.teacherName = 'Guru Pembimbing',
+    required this.onOpenStudents,
+    required this.onOpenAttendance,
+    required this.onOpenReviews,
   });
 
-  final PklUser? user;
-  final List<PklUser>? users;
-  final int? pendingJournalCount;
-  final VoidCallback? onOpenStudents;
-  final VoidCallback? onOpenReviews;
-  final VoidCallback? onOpenAttendance;
+  final String teacherName;
+  final VoidCallback onOpenStudents;
+  final VoidCallback onOpenAttendance;
+  final VoidCallback onOpenReviews;
 
-  static const PklUser _defaultTeacher = PklUser(
-    username: 'guru',
-    password: '123',
-    name: 'Danang Dwi Gusti Fajar Yudha, S.Kom.',
-    role: UserRole.guru,
-    accountId: '19820109940201',
-    address: 'Jl. Rawamangun Muka No. 12, Jakarta Timur',
-    phoneNumber: '081398765432',
-    school: 'SMK Negeri 1 Jakarta',
-  );
+  @override
+  State<TeacherDashboardScreen> createState() => _TeacherDashboardScreenState();
+}
 
-  static const List<PklUser> _defaultStudents = [
-    PklUser(
-      username: 'frida',
-      password: '123',
-      name: 'Frida Awan',
-      role: UserRole.murid,
-      accountId: '007812121134',
-      mentorAccountId: '19820109940201',
-      idukaAccountId: 'IDUKA-001',
-      companyName: 'PT Aksara Digital Nusantara',
-      address: 'Jl. Tebet Barat Dalam No. 15, Jakarta Selatan',
-      phoneNumber: '085711223344',
-    ),
-    PklUser(
-      username: 'rakha',
-      password: '123',
-      name: 'Muhammad Rakha',
-      role: UserRole.murid,
-      accountId: '008127658190',
-      mentorAccountId: '19820109940201',
-      idukaAccountId: 'IDUKA-001',
-      companyName: 'PT Aksara Digital Nusantara',
-      address: 'Jl. Kebon Jeruk Raya No. 8, Jakarta Barat',
-      phoneNumber: '087855667788',
-    ),
-  ];
+class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
+  final _service = TeacherMentorService();
+
+  bool _isLoading = true;
+  List<SupervisedStudent> _students = [];
+  List<StudentAttendanceItem> _attendances = [];
+  List<StudentJournalItem> _journals = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final results = await Future.wait([
+        _service.fetchMyStudents(),
+        _service.fetchStudentsAttendances(),
+        _service.fetchStudentsJournals(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _students = results[0] as List<SupervisedStudent>;
+        _attendances = results[1] as List<StudentAttendanceItem>;
+        _journals = results[2] as List<StudentJournalItem>;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final activeUser = user ?? _defaultTeacher;
-    final activeUsers = users ?? _defaultStudents;
-    final activePendingCount = pendingJournalCount ?? 2;
-
-    final studentCount = activeUsers
-        .where(
-          (account) =>
-              account.role == UserRole.murid &&
-              account.mentorAccountId == activeUser.accountId,
-        )
+    final now = DateTime.now();
+    final todayAttendances = _attendances.where((a) {
+      final d = a.record.attendanceDate;
+      return d.year == now.year && d.month == now.month && d.day == now.day;
+    }).length;
+    final pendingJournals = _journals
+        .where((j) => j.entry.status == ApprovalStatus.pending)
         .length;
+    final firstName = widget.teacherName.trim().isEmpty
+        ? 'Guru'
+        : widget.teacherName.trim().split(' ').first;
 
     return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        children: [
-          const Row(
-            children: [
-              BrandMark(compact: true),
-              Spacer(),
-              InfoPill(
-                label: 'GURU PEMBIMBING',
-                color: AppColors.paleGreen,
-                textColor: AppColors.green,
-                icon: Icons.person_pin_outlined,
+      child: RefreshIndicator(
+        onRefresh: _loadData,
+        color: AppColors.maroon,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          children: [
+            Row(
+              children: [
+                const BrandMark(compact: true),
+                const Spacer(),
+                PklNotificationButton(unreadCount: pendingJournals),
+              ],
+            ),
+            const SizedBox(height: 18),
+
+            // Welcome Banner
+            Container(
+              padding: const EdgeInsets.all(21),
+              decoration: BoxDecoration(
+                color: AppColors.maroon,
+                borderRadius: BorderRadius.circular(24),
+                gradient: const LinearGradient(
+                  colors: [AppColors.maroon, AppColors.maroonDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
-              SizedBox(width: 6),
-              PklNotificationButton(unreadCount: 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        currentDateLabel().toUpperCase(),
+                        style: TextStyle(
+                          color: AppColors.cream.withValues(alpha: 0.85),
+                          fontSize: 10,
+                          letterSpacing: 1.1,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                      const InfoPill(
+                        label: 'GURU PEMBIMBING',
+                        color: Color(0x33FFFFFF),
+                        textColor: Colors.white,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Halo, $firstName!',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Pantau kehadiran, lokasi PKL, dan jurnal kegiatan siswa bimbingan Anda.',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.82),
+                      fontSize: 12,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _TeacherMetric(
+                          label: 'Murid Bimbingan',
+                          value: _isLoading ? '-' : '${_students.length}',
+                          icon: Icons.groups_outlined,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _TeacherMetric(
+                          label: 'Presensi Hari Ini',
+                          value: _isLoading ? '-' : '$todayAttendances',
+                          icon: Icons.fact_check_outlined,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _TeacherMetric(
+                          label: 'Jurnal Pending',
+                          value: _isLoading ? '-' : '$pendingJournals',
+                          icon: Icons.rate_review_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 22),
+            const SectionLabel('Menu Monitoring'),
+            WhiteCard(
+              padding: 0,
+              child: Column(
+                children: [
+                  _NavActionTile(
+                    icon: Icons.groups_outlined,
+                    iconColor: AppColors.maroon,
+                    iconBg: AppColors.cream,
+                    title: 'Daftar Murid Bimbingan',
+                    subtitle: '${_students.length} siswa aktif dalam bimbingan',
+                    onTap: widget.onOpenStudents,
+                  ),
+                  const Divider(height: 1, indent: 68, endIndent: 16),
+                  _NavActionTile(
+                    icon: Icons.fact_check_outlined,
+                    iconColor: AppColors.green,
+                    iconBg: AppColors.paleGreen,
+                    title: 'Monitoring Presensi',
+                    subtitle:
+                        '${_attendances.length} catatan presensi tercatat',
+                    onTap: widget.onOpenAttendance,
+                  ),
+                  const Divider(height: 1, indent: 68, endIndent: 16),
+                  _NavActionTile(
+                    icon: Icons.menu_book_outlined,
+                    iconColor: AppColors.amber,
+                    iconBg: AppColors.paleAmber,
+                    title: 'Jurnal Kegiatan Siswa',
+                    subtitle: '${_journals.length} jurnal (${pendingJournals} menunggu review)',
+                    onTap: widget.onOpenReviews,
+                  ),
+                ],
+              ),
+            ),
+
+            if (_students.isNotEmpty) ...[
+              const SizedBox(height: 22),
+              SectionLabel(
+                'Murid Bimbingan Terbaru',
+                action: 'Lihat Semua',
+                onAction: widget.onOpenStudents,
+              ),
+              ..._students.take(3).map(
+                    (s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: WhiteCard(
+                        padding: 14,
+                        onTap: widget.onOpenStudents,
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: AppColors.cream,
+                              child: Text(
+                                s.student.fullName.isEmpty
+                                    ? '?'
+                                    : s.student.fullName[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: AppColors.maroon,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    s.student.fullName,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.ink,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    s.companyName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.muted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 14,
+                              color: AppColors.muted,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
             ],
-          ),
-          const SizedBox(height: 22),
-          Container(
-            padding: const EdgeInsets.all(21),
-            decoration: BoxDecoration(
-              color: AppColors.maroon,
-              borderRadius: BorderRadius.circular(23),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'RUANG PEMBIMBING',
-                  style: TextStyle(
-                    color: AppColors.cream.withOpacity(0.8),
-                    fontSize: 10,
-                    letterSpacing: 1.2,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 11),
-                Text(
-                  'Halo, ${activeUser.name.split(' ').first}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 25,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Pantau perkembangan siswa dan beri arahan untuk langkah berikutnya.',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 12,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _TeacherMetric(
-                        value: '$studentCount',
-                        label: 'Murid dibimbing',
-                        icon: Icons.school_outlined,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _TeacherMetric(
-                        value: '$activePendingCount',
-                        label: 'Jurnal menunggu',
-                        icon: Icons.rate_review_outlined,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 22),
-          const SectionLabel('Akses cepat'),
-          WhiteCard(
-            padding: 0,
-            child: Column(
-              children: [
-                _TeacherAction(
-                  icon: Icons.groups_2_outlined,
-                  color: AppColors.maroon,
-                  title: 'Daftar murid bimbingan',
-                  subtitle: '$studentCount akun murid terdaftar',
-                  onTap: onOpenStudents ?? () {},
-                ),
-                const Divider(height: 1, indent: 66, endIndent: 15),
-                _TeacherAction(
-                  icon: Icons.menu_book_outlined,
-                  color: AppColors.amber,
-                  title: 'Tinjau jurnal kegiatan',
-                  subtitle: 'Periksa catatan dan beri tindak lanjut',
-                  onTap: onOpenReviews ?? () {},
-                ),
-                const Divider(height: 1, indent: 66, endIndent: 15),
-                _TeacherAction(
-                  icon: Icons.fact_check_outlined,
-                  color: AppColors.green,
-                  title: 'Riwayat kehadiran',
-                  subtitle: 'Lihat presensi murid bimbingan',
-                  onTap: onOpenAttendance ?? () {},
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 22),
-          SectionLabel(
-            'Murid terbaru',
-            action: 'Lihat semua',
-            onAction: onOpenStudents,
-          ),
-          ...activeUsers
-              .where(
-                (account) =>
-                    account.role == UserRole.murid &&
-                    account.mentorAccountId == activeUser.accountId,
-              )
-              .take(3)
-              .map(
-                (student) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: WhiteCard(
-                    padding: 14,
-                    child: Row(
-                      children: [
-                        const CircleAvatar(
-                          radius: 21,
-                          backgroundColor: AppColors.cream,
-                          child: Icon(
-                            Icons.school_outlined,
-                            color: AppColors.maroon,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 11),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                student.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: AppColors.ink,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'NISN ${student.accountId}',
-                                style: const TextStyle(
-                                  color: AppColors.muted,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const InfoPill(
-                          label: 'Aktif',
-                          color: AppColors.paleGreen,
-                          textColor: AppColors.green,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-          const SizedBox(height: 5),
-          const Text(
-            'Status jurnal dan presensi pada ringkasan merupakan data contoh.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, fontSize: 10),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
-
-// ============================================================
-// PRIVATE WIDGETS
-// ============================================================
 
 class _TeacherMetric extends StatelessWidget {
   const _TeacherMetric({
-    required this.value,
     required this.label,
+    required this.value,
     required this.icon,
   });
 
-  final String value;
   final String label;
+  final String value;
   final IconData icon;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.11),
+        color: Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(15),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.cream, size: 19),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.78),
-                    fontSize: 9,
-                  ),
-                ),
-              ],
+          Icon(icon, color: AppColors.cream, size: 18),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.78),
+              fontSize: 10,
             ),
           ),
         ],
@@ -559,17 +327,19 @@ class _TeacherMetric extends StatelessWidget {
   }
 }
 
-class _TeacherAction extends StatelessWidget {
-  const _TeacherAction({
+class _NavActionTile extends StatelessWidget {
+  const _NavActionTile({
     required this.icon,
-    required this.color,
+    required this.iconColor,
+    required this.iconBg,
     required this.title,
     required this.subtitle,
     required this.onTap,
   });
 
   final IconData icon;
-  final Color color;
+  final Color iconColor;
+  final Color iconBg;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -578,17 +348,17 @@ class _TeacherAction extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(16),
       child: Padding(
         padding: const EdgeInsets.all(15),
         child: Row(
           children: [
             CircleAvatar(
-              radius: 21,
-              backgroundColor: color.withOpacity(0.1),
-              child: Icon(icon, color: color, size: 20),
+              radius: 20,
+              backgroundColor: iconBg,
+              child: Icon(icon, color: iconColor, size: 20),
             ),
-            const SizedBox(width: 11),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -597,7 +367,7 @@ class _TeacherAction extends StatelessWidget {
                     title,
                     style: const TextStyle(
                       color: AppColors.ink,
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -606,7 +376,7 @@ class _TeacherAction extends StatelessWidget {
                     subtitle,
                     style: const TextStyle(
                       color: AppColors.muted,
-                      fontSize: 10,
+                      fontSize: 11,
                     ),
                   ),
                 ],
@@ -614,8 +384,8 @@ class _TeacherAction extends StatelessWidget {
             ),
             const Icon(
               Icons.arrow_forward_ios_rounded,
-              color: AppColors.muted,
               size: 14,
+              color: AppColors.muted,
             ),
           ],
         ),
