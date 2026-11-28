@@ -62,4 +62,27 @@ class AttendanceRecord {
       };
 
   bool get isComplete => checkIn != null && checkOut != null;
+
+  String get shortWeekday {
+    const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    return days[attendanceDate.weekday - 1];
+  }
+
+  String get shortDate {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    return '${attendanceDate.day} ${months[attendanceDate.month - 1]}';
+  }
 }
